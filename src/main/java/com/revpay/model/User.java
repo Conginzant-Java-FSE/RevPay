@@ -1,9 +1,9 @@
-
 package com.revpay.model;
-
 
 import com.revpay.enums.AccountType;
 import jakarta.persistence.*;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -36,6 +36,8 @@ public class User {
     private AccountType accountType;
 
     private boolean active = true;
+
+    private LocalDateTime createdAt;
 
     public Long getId() {
         return id;
@@ -107,6 +109,14 @@ public class User {
 
     public void setActive(boolean active) {
         this.active = active;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public User(Long id, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active) {
