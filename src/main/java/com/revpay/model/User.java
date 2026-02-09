@@ -1,4 +1,6 @@
+
 package com.revpay.model;
+
 
 import com.revpay.enums.AccountType;
 import jakarta.persistence.*;
