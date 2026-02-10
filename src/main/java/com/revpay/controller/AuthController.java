@@ -45,6 +45,7 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
@@ -58,6 +59,7 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         List<UserListResponse> users = userService.getAllUsers();

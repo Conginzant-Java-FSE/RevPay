@@ -9,7 +9,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -97,6 +96,7 @@ public class UserService {
 
         return profile;
     }
+
     public List<UserListResponse> getAllUsers() {
         List<User> users = userRepository.findAll();
 
