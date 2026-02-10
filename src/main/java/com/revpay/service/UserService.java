@@ -1,7 +1,5 @@
 package com.revpay.service;
-import com.revpay.dto.LoginRequest;
-import com.revpay.dto.LoginResponse;
-import com.revpay.dto.UserRegistrationRequest;
+import com.revpay.dto.*;
 import com.revpay.enums.AccountType;
 import com.revpay.model.User;
 import com.revpay.repository.UserRepository;
@@ -10,7 +8,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -84,5 +84,33 @@ public class UserService {
                 user.getEmail(),
                 user.getAccountType()
         );
+    }
+
+    public ProfileResponse getProfile(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        ProfileResponse profile = new ProfileResponse();
+        profile.setUserId(user.getId());
+        profile.setFullName(user.getFullName());
+        profile.setEmail(user.getEmail());
+        profile.setPhone(user.getPhone());
+        profile.setAccountType(user.getAccountType());
+        //profile.setSecurityQuestion(user.getSecurityQuestion());
+
+        return profile;
+    }
+    public List<UserListResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+
+        return users.stream().map(user -> {
+            UserListResponse response = new UserListResponse();
+            response.setUserId(user.getId());
+            response.setFullName(user.getFullName());
+            response.setEmail(user.getEmail());
+            response.setPhone(user.getPhone());
+            response.setAccountType(user.getAccountType());
+            return response;
+        }).collect(Collectors.toList());
     }
 }
