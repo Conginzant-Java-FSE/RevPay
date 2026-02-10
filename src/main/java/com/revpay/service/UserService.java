@@ -9,7 +9,6 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,19 +23,16 @@ public class UserService {
     @Autowired
     private JwtUtil jwtUtil;
 
-    // Existing register method
-    public String register(UserRegistrationRequest request) {
-        // Check if email already exists
+    // New User Register
+    public UserRegistrationResponse register(UserRegistrationRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            return "Email already registered";
+            return new UserRegistrationResponse("Email already registered");
         }
 
-        // Check if phone already exists
         if (userRepository.findByPhone(request.getPhone()).isPresent()) {
-            return "Phone number already registered";
+            return new UserRegistrationResponse("Phone number already registered");
         }
 
-        // Create new user
         User user = new User();
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
@@ -49,10 +45,10 @@ public class UserService {
 
         userRepository.save(user);
 
-        return "User registered successfully";
+        return new UserRegistrationResponse("User registered successfully");
     }
 
-    // NEW: Login method
+    // User Login method
     public LoginResponse login(LoginRequest request) {
         // Find user by email or phone
         User user = (User) userRepository.findByEmail(request.getEmailOrPhone())
@@ -100,6 +96,7 @@ public class UserService {
 
         return profile;
     }
+
     public List<UserListResponse> getAllUsers() {
         List<User> users = userRepository.findAll();
 

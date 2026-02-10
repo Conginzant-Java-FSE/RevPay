@@ -26,14 +26,15 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody UserRegistrationRequest request) {
 
-        String result = userService.register(request);
+        UserRegistrationResponse response = userService.register(request);
 
-        if (result.contains("already")) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(result);
+        if (response.getMessage().contains("already")) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
+
     @PostMapping("/login")
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         try {
@@ -44,6 +45,7 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
@@ -57,6 +59,7 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         List<UserListResponse> users = userService.getAllUsers();
