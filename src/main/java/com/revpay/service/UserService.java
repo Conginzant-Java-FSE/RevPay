@@ -1,9 +1,13 @@
 package com.revpay.service;
 import com.revpay.dto.*;
 import com.revpay.enums.AccountType;
+import com.revpay.exception.SecurityAnswerMismatchException;
+import com.revpay.exception.UserNotFoundException;
 import com.revpay.model.User;
 import com.revpay.repository.UserRepository;
 import com.revpay.util.JwtUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,6 +17,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class UserService {
+
+    private static final Logger logger = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
     private UserRepository userRepository;
@@ -78,8 +84,39 @@ public class UserService {
                 user.getId(),
                 user.getFullName(),
                 user.getEmail(),
-                user.getAccountType()
-        );
+                user.getAccountType());
+    }
+
+    public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
+        logger.info("Forgot password request for: {}", request.getEmailOrPhone());
+
+        User user = userRepository.findByEmail(request.getEmailOrPhone())
+                .or(() -> userRepository.findByPhone(request.getEmailOrPhone()))
+                .orElseThrow(() -> {
+                    logger.warn("Forgot password failed - user not found: {}", request.getEmailOrPhone());
+                    return new UserNotFoundException("No user found with the provided email or phone number");
+                });
+
+        if (!user.isActive()) {
+            logger.warn("Forgot password failed - account inactive for: {}", request.getEmailOrPhone());
+            throw new RuntimeException("Account is inactive. Cannot reset password.");
+        }
+
+        if (!user.getSecurityQuestion().equalsIgnoreCase(request.getSecurityQuestion())) {
+            logger.warn("Forgot password failed - security question mismatch for: {}", request.getEmailOrPhone());
+            throw new SecurityAnswerMismatchException("Security question does not match");
+        }
+
+        if (!passwordEncoder.matches(request.getSecurityAnswer(), user.getSecurityAnswer())) {
+            logger.warn("Forgot password failed - security answer mismatch for: {}", request.getEmailOrPhone());
+            throw new SecurityAnswerMismatchException("Security answer is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        logger.info("Password reset successfully for: {}", user.getEmail());
+        return new ForgotPasswordResponse("Password reset successfully", true);
     }
 
     public ProfileResponse getProfile(Long userId) {
