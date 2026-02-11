@@ -53,7 +53,6 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-
     @Operation(summary = "Login user", description = "Authenticates a user with email/phone and password, returns a JWT token")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Login successful", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
@@ -89,7 +88,6 @@ public class AuthController {
         List<UserListResponse> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
-
 
     @Operation(summary = "Forgot password", description = "Resets the user's password after verifying their security question and answer. The new password is stored in encrypted format.")
     @ApiResponses(value = {
