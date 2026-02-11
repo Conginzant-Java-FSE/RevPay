@@ -31,6 +31,7 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -88,7 +89,6 @@ public class AuthController {
         List<UserListResponse> users = userService.getAllUsers();
         return ResponseEntity.ok(users);
     }
-}
 
 
     @Operation(summary = "Forgot password", description = "Resets the user's password after verifying their security question and answer. The new password is stored in encrypted format.")
@@ -100,9 +100,9 @@ public class AuthController {
     })
     @PostMapping("/forgot-password")
     public ResponseEntity<ForgotPasswordResponse> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        //logger.info("Received forgot-password request for: {}", request.getEmailOrPhone());
+        logger.info("Received forgot-password request for: {}", request.getEmailOrPhone());
         ForgotPasswordResponse response = userService.forgotPassword(request);
-        //logger.info("Password reset completed for: {}", request.getEmailOrPhone());
+        logger.info("Password reset completed for: {}", request.getEmailOrPhone());
         return ResponseEntity.ok(response);
     }
 }
