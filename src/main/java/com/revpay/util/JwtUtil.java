@@ -1,9 +1,11 @@
 package com.revpay.util;
 
+import com.revpay.repository.BlacklistedTokenRepository;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +22,9 @@ public class JwtUtil {
 
     @Value("${jwt.expiration}")
     private Long expiration;
+
+    @Autowired
+    private BlacklistedTokenRepository blacklistedTokenRepository;
 
     // Generate token
     public String generateToken(Long userId, String email, String accountType) {
@@ -68,6 +73,13 @@ public class JwtUtil {
     // Check if token is expired
     public boolean isTokenExpired(String token) {
         return extractAllClaims(token).getExpiration().before(new Date());
+    }
+
+    public boolean isTokenBlacklisted(String token) {
+        return blacklistedTokenRepository.existsByToken(token);
+    }
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
     }
 
     // Validate token
