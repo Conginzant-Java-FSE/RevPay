@@ -1,14 +1,18 @@
 package com.revpay.service;
+
 import com.revpay.dto.*;
-import com.revpay.enums.AccountType;
-import com.revpay.exception.SecurityAnswerMismatchException;
-import com.revpay.exception.UserNotFoundException;
-import com.revpay.model.User;
-import com.revpay.repository.UserRepository;
+import com.revpay.enums.*;
+import com.revpay.exception.*;
+import com.revpay.model.*;
+import com.revpay.repository.*;
 import com.revpay.util.JwtUtil;
+
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +32,23 @@ public class UserService {
 
     @Autowired
     private JwtUtil jwtUtil;
+
+    @Autowired
+    private PersonalProfileRepository personalProfileRepository;
+
+    @Autowired
+    private BankAccountRepository bankAccountRepository;
+
+    public UserService(UserRepository userRepository, PersonalProfileRepository personalProfileRepository,
+                       BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil)
+    {
+        this.userRepository = userRepository;
+        this.personalProfileRepository = personalProfileRepository;
+        this.bankAccountRepository = bankAccountRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtUtil = jwtUtil;
+    }
 
     // New User Register
     public UserRegistrationResponse register(UserRegistrationRequest request) {
@@ -160,6 +181,54 @@ public class UserService {
         profile.setAccountType(user.getAccountType());
 
         return profile;
+    }
+
+    // GET LOGGED-IN USER
+    private User getLoggedInUser() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    //  CREATE PERSONAL PROFILE + BANK
+    @Transactional
+    public void createPersonalProfileWithBank(PersonalProfileFullRequest request) {
+
+        User user = getLoggedInUser();
+
+        if (personalProfileRepository.existsByUser(user)) {
+            throw new IllegalStateException("Personal profile already exists for this user");
+        }
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            user.setUsername(request.getUsername());
+            userRepository.save(user);
+        }
+
+        PersonalProfile profile = new PersonalProfile();
+        profile.setUser(user);
+        profile.setDob(request.getDob());
+        profile.setAddress(request.getAddress());
+        profile.setStatus(RecordStatus.ACTIVE);
+
+        personalProfileRepository.save(profile);
+
+        BankAccount bankAccount = new BankAccount();
+        bankAccount.setUser(user);
+        bankAccount.setAccountHolderName(request.getAccountHolderName());
+        bankAccount.setBankName(request.getBankName());
+        bankAccount.setAccountNumber(request.getAccountNumber());
+        bankAccount.setIfscCode(request.getIfscCode());
+        bankAccount.setIsPrimary(request.getIsPrimary());
+        bankAccount.setStatus(RecordStatus.ACTIVE);
+
+        bankAccountRepository.save(bankAccount);
     }
 
 }

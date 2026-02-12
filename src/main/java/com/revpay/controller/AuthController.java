@@ -31,9 +31,6 @@ public class AuthController {
     @Autowired
     private UserService userService;
 
-//    @Autowired
-//    private JwtUtil jwtUtil;
-
     @Operation(summary = "Register a new user", description = "Registers a new user or business user with encrypted password and security question")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User registered successfully"),
@@ -66,32 +63,6 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", e.getMessage()));
         }
-    }
-
-    //    @GetMapping("/profile")
-    //    public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
-    //        try {
-    //            // Extract userId from JWT token
-    //
-    //            Long userId = jwtUtil.extractUserId(token.substring(7)); // Remove "Bearer " prefix
-    //            ProfileResponse profile = userService.getProfile(userId);
-    //            return ResponseEntity.ok(profile);
-    //        } catch (RuntimeException e) {
-    //            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-    //                    .body(Map.of("error", e.getMessage()));
-    //        }
-    //    }
-
-    @Operation(summary = "User Profile Details", description = "Fetched user details by verifying the token passed.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Details Fetched Successfully", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
-    })
-    @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(Authentication authentication) {
-        String email = authentication.getName();
-        ProfileResponse profile = userService.getProfileByEmail(email);
-        return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/users")
