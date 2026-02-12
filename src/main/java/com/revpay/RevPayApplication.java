@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.servers.Server;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @OpenAPIDefinition(
         info = @Info(
@@ -16,7 +17,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
                 @Server(url = "http://localhost:8080", description = "Local Development Server")
         }
 )
+
 @SpringBootApplication
+@EnableScheduling
 public class RevPayApplication {
 
     public static void main(String[] args) {

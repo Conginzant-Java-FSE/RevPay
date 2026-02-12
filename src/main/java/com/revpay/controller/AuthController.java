@@ -2,6 +2,7 @@
 package com.revpay.controller;
 
 import com.revpay.dto.*;
+import com.revpay.service.AuthService;
 import com.revpay.service.UserService;
 import com.revpay.util.JwtUtil;
 import jakarta.validation.Valid;
@@ -22,6 +23,10 @@ public class AuthController {
     private UserService userService ;
     @Autowired
     private JwtUtil jwtUtil;
+
+
+    @Autowired
+    private AuthService authService;
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody UserRegistrationRequest request) {
@@ -45,7 +50,28 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        try {
+            // Extract token from Authorization header
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid authorization header"));
+            }
 
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+
+            // Blacklist the token
+            authService.logout(token);
+
+            LogoutResponse response = new LogoutResponse("Logout successful", true);
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String token) {
         try {
