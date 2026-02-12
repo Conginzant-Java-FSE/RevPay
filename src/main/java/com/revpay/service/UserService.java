@@ -147,4 +147,19 @@ public class UserService {
             return response;
         }).collect(Collectors.toList());
     }
+
+    public ProfileResponse getProfileByEmail(String email) {
+
+        User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
+
+        ProfileResponse profile = new ProfileResponse();
+        profile.setUserId(user.getId());
+        profile.setFullName(user.getFullName());
+        profile.setEmail(user.getEmail());
+        profile.setPhone(user.getPhone());
+        profile.setAccountType(user.getAccountType());
+
+        return profile;
+    }
+
 }
