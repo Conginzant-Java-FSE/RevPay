@@ -2,7 +2,6 @@ package com.revpay.controller;
 
 import com.revpay.dto.*;
 import com.revpay.service.UserService;
-import com.revpay.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
