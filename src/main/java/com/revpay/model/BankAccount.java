@@ -2,7 +2,16 @@ package com.revpay.model;
 
 import com.revpay.config.AuditConfig;
 import com.revpay.enums.RecordStatus;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "bank_accounts")
@@ -20,6 +29,7 @@ public class BankAccount extends AuditConfig {
 
     private String bankName;
 
+    @Column(nullable = false)
     private String accountNumber;
 
     private String ifscCode;
@@ -28,6 +38,21 @@ public class BankAccount extends AuditConfig {
 
     @Enumerated(EnumType.STRING)
     private RecordStatus status;
+
+    public BankAccount() {}
+
+    public BankAccount(Long accountId, User user, String accountHolderName, String bankName,
+                       String accountNumber, String ifscCode, Boolean isPrimary, RecordStatus status)
+    {
+        this.accountId = accountId;
+        this.user = user;
+        this.accountHolderName = accountHolderName;
+        this.bankName = bankName;
+        this.accountNumber = accountNumber;
+        this.ifscCode = ifscCode;
+        this.isPrimary = isPrimary;
+        this.status = status;
+    }
 
     public Long getAccountId() {
         return accountId;
@@ -77,12 +102,12 @@ public class BankAccount extends AuditConfig {
         this.ifscCode = ifscCode;
     }
 
-    public Boolean getPrimary() {
+    public Boolean getIsPrimary() {
         return isPrimary;
     }
 
-    public void setPrimary(Boolean primary) {
-        isPrimary = primary;
+    public void setIsPrimary(Boolean isPrimary) {
+        this.isPrimary = isPrimary;
     }
 
     public RecordStatus getStatus() {
@@ -92,17 +117,4 @@ public class BankAccount extends AuditConfig {
     public void setStatus(RecordStatus status) {
         this.status = status;
     }
-
-    public BankAccount(Long accountId, User user, String accountHolderName, String bankName, String accountNumber, String ifscCode, Boolean isPrimary, RecordStatus status) {
-        this.accountId = accountId;
-        this.user = user;
-        this.accountHolderName = accountHolderName;
-        this.bankName = bankName;
-        this.accountNumber = accountNumber;
-        this.ifscCode = ifscCode;
-        this.isPrimary = isPrimary;
-        this.status = status;
-    }
-
-    public BankAccount() {}
 }

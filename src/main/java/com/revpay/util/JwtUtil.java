@@ -53,7 +53,11 @@ public class JwtUtil {
 
     // Extract username (email)
     public String extractUsername(String token) {
-        return extractAllClaims(token).getSubject();
+        try {
+            return extractAllClaims(token).getSubject();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     // Extract user ID
@@ -67,7 +71,13 @@ public class JwtUtil {
     }
 
     // Validate token
-    public boolean validateToken(String token, String email) {
-        return (extractUsername(token).equals(email) && !isTokenExpired(token));
+    public boolean validateToken(String token, String username) {
+        try {
+            String extractedUsername = extractUsername(token);
+            return extractedUsername.equals(username) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
     }
+
 }

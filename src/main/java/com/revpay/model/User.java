@@ -13,6 +13,9 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(unique = true)
+    private String username;
+
     @Column(nullable = false)
     private String fullName;
 
@@ -118,6 +121,13 @@ public class User {
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
 
     public User(Long id, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active) {
         this.id = id;
@@ -132,4 +142,5 @@ public class User {
     }
 
     public User() {}
+
 }
