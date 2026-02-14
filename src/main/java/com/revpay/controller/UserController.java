@@ -7,6 +7,8 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +20,8 @@ import org.springframework.web.bind.annotation.*;
 public class UserController {
 
     private final UserService userService;
+
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     public UserController(UserService userService) {
         this.userService = userService;
@@ -49,6 +53,31 @@ public class UserController {
 
         ApiResponse<Void> response =
                 new ApiResponse<>(true, "Personal profile and bank account created successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Update Personal Profile",
+            description = "Update the logged-in user's personal profile and bank details"
+    )
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Profile does not exist"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    @PutMapping("/update-personal-user")
+    public ResponseEntity<ApiResponse<Void>> updatePersonalProfileWithBank(
+            @RequestBody PersonalProfileFullRequest request) {
+
+        logger.info("Update profile request received");
+
+        userService.updatePersonalProfileWithBank(request);
+
+        ApiResponse<Void> response =
+                new ApiResponse<>(true, "Personal profile and bank account updated successfully");
+
+        logger.info("Profile updated successfully");
 
         return ResponseEntity.ok(response);
     }
