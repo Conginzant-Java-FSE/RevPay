@@ -42,10 +42,6 @@ public class User extends AuditConfig {
 
     private boolean active = true;
 
-//    @CreatedDate
-//    @Column(nullable = false, updatable = false)
-//    private LocalDateTime createdAt;
-
     public Long getId() {
         return id;
     }
@@ -118,14 +114,6 @@ public class User extends AuditConfig {
         this.active = active;
     }
 
-//    public LocalDateTime getCreatedAt() {
-//        return createdAt;
-//    }
-//
-//    public void setCreatedAt(LocalDateTime createdAt) {
-//        this.createdAt = createdAt;
-//    }
-//
     public String getUsername() {
         return username;
     }
