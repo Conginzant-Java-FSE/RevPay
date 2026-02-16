@@ -5,7 +5,10 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "wallet")
+@Table(name = "wallet",
+        uniqueConstraints = {
+                @UniqueConstraint(columnNames = "user_id")
+        })
 public class Wallet extends AuditConfig {
 
     @Id
@@ -13,7 +16,7 @@ public class Wallet extends AuditConfig {
     private Long walletId;
 
     @OneToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
     private BigDecimal balance;

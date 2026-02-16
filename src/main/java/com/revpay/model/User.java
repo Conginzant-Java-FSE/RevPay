@@ -1,13 +1,15 @@
 package com.revpay.model;
 
+import com.revpay.config.AuditConfig;
 import com.revpay.enums.AccountType;
 import jakarta.persistence.*;
+import org.springframework.data.annotation.CreatedDate;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
-public class User {
+public class User extends AuditConfig {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -39,8 +41,6 @@ public class User {
     private AccountType accountType;
 
     private boolean active = true;
-
-    private LocalDateTime createdAt;
 
     public Long getId() {
         return id;
@@ -114,13 +114,6 @@ public class User {
         this.active = active;
     }
 
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
     public String getUsername() {
         return username;
     }

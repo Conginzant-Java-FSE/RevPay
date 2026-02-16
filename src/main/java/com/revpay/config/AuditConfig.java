@@ -17,6 +17,7 @@ import jakarta.persistence.MappedSuperclass;
 public abstract class AuditConfig {
 
     @CreatedDate
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
     @LastModifiedDate

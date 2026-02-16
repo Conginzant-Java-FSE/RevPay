@@ -16,6 +16,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -39,6 +40,9 @@ public class UserService {
     @Autowired
     private BankAccountRepository bankAccountRepository;
 
+    @Autowired
+    private WalletRepository walletRepository;
+
     public UserService(UserRepository userRepository, PersonalProfileRepository personalProfileRepository,
                        BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder, JwtUtil jwtUtil)
     {
@@ -50,6 +54,7 @@ public class UserService {
     }
 
     // New User Register
+    @Transactional
     public UserRegistrationResponse register(UserRegistrationRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             return new UserRegistrationResponse("Email already registered");
@@ -69,9 +74,28 @@ public class UserService {
         user.setAccountType(request.getAccountType() != null ? request.getAccountType() : AccountType.PERSONAL);
         user.setActive(true);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        createWalletForUser(savedUser);
 
         return new UserRegistrationResponse("User registered successfully");
+    }
+
+    // Create a wallet for the user after registration
+    private void createWalletForUser(User user) {
+
+        if (walletRepository.existsByUser(user)) {
+            throw new IllegalStateException("Wallet already exists for this user");
+        }
+
+        Wallet wallet = new Wallet();
+        wallet.setUser(user);
+        wallet.setBalance(BigDecimal.ZERO);
+        wallet.setCurrency("INR"); // default currency
+
+        walletRepository.save(wallet);
+
+        logger.info("Wallet created for user: {}", user.getEmail());
     }
 
     // User Login method
