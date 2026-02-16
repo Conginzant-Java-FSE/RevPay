@@ -78,6 +78,7 @@ public class JwtUtil {
     public boolean isTokenBlacklisted(String token) {
         return blacklistedTokenRepository.existsByToken(token);
     }
+
     public Date extractExpiration(String token) {
         return extractAllClaims(token).getExpiration();
     }
@@ -86,7 +87,7 @@ public class JwtUtil {
     public boolean validateToken(String token, String username) {
         try {
             String extractedUsername = extractUsername(token);
-            return extractedUsername.equals(username) && !isTokenExpired(token);
+            return extractedUsername.equals(username) && !isTokenExpired(token) && !isTokenBlacklisted(token);
         } catch (Exception e) {
             return false;
         }
