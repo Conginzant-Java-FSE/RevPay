@@ -40,8 +40,7 @@ public class UserService {
     private BankAccountRepository bankAccountRepository;
 
     public UserService(UserRepository userRepository, PersonalProfileRepository personalProfileRepository,
-                       BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil)
+                       BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder, JwtUtil jwtUtil)
     {
         this.userRepository = userRepository;
         this.personalProfileRepository = personalProfileRepository;
@@ -108,6 +107,7 @@ public class UserService {
                 user.getAccountType());
     }
 
+    // verify and change the users password
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         logger.info("Forgot password request for: {}", request.getEmailOrPhone());
 
@@ -140,21 +140,7 @@ public class UserService {
         return new ForgotPasswordResponse("Password reset successfully", true);
     }
 
-    public ProfileResponse getProfile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        ProfileResponse profile = new ProfileResponse();
-        profile.setUserId(user.getId());
-        profile.setFullName(user.getFullName());
-        profile.setEmail(user.getEmail());
-        profile.setPhone(user.getPhone());
-        profile.setAccountType(user.getAccountType());
-        //profile.setSecurityQuestion(user.getSecurityQuestion());
-
-        return profile;
-    }
-
+    // get all users list
     public List<UserListResponse> getAllUsers() {
         List<User> users = userRepository.findAll();
 
@@ -169,6 +155,7 @@ public class UserService {
         }).collect(Collectors.toList());
     }
 
+    // Fetch user profile details
     public ProfileResponse getProfileByEmail(String email) {
 
         User user = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("User not found"));
@@ -183,7 +170,7 @@ public class UserService {
         return profile;
     }
 
-    // GET LOGGED-IN USER
+    // Get the authendicated user
     private User getLoggedInUser() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -196,7 +183,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    //  CREATE PERSONAL PROFILE + BANK
+    // create personal profile with bank details
     @Transactional
     public void createPersonalProfileWithBank(PersonalProfileFullRequest request) {
 
@@ -229,6 +216,58 @@ public class UserService {
         bankAccount.setStatus(RecordStatus.ACTIVE);
 
         bankAccountRepository.save(bankAccount);
+    }
+
+    // update personal profile with bank details
+    @Transactional
+    public void updatePersonalProfileWithBank(PersonalProfileFullRequest request) {
+
+        User user = getLoggedInUser();
+
+        logger.info("Updating profile for user: {}", user.getEmail());
+
+        PersonalProfile profile = personalProfileRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Personal profile does not exist for this user"));
+
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            user.setUsername(request.getUsername());
+            userRepository.save(user);
+            logger.info("Username updated");
+        }
+
+        if (request.getDob() != null) {
+            profile.setDob(request.getDob());
+        }
+
+        if (request.getAddress() != null) {
+            profile.setAddress(request.getAddress());
+        }
+
+        personalProfileRepository.save(profile);
+        logger.info("Personal profile updated");
+
+        BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() -> new IllegalStateException("Primary bank account not found"));
+
+        if (request.getAccountHolderName() != null) {
+            bankAccount.setAccountHolderName(request.getAccountHolderName());
+        }
+
+        if (request.getBankName() != null) {
+            bankAccount.setBankName(request.getBankName());
+        }
+
+        if (request.getAccountNumber() != null) {
+            bankAccount.setAccountNumber(request.getAccountNumber());
+        }
+
+        if (request.getIfscCode() != null) {
+            bankAccount.setIfscCode(request.getIfscCode());
+        }
+
+        bankAccountRepository.save(bankAccount);
+
+        logger.info("Bank account updated for user: {}", user.getEmail());
     }
 
 }
