@@ -1,7 +1,9 @@
+
 package com.revpay.controller;
 
 import com.revpay.dto.*;
-import com.revpay.service.UserService;
+import com.revpay.service.*;
+import com.revpay.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -30,6 +32,12 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @Autowired
+    private AuthService authService;
 
     @Operation(summary = "Register a new user", description = "Registers a new user or business user with encrypted password and security question")
     @ApiResponses(value = {
@@ -61,6 +69,29 @@ public class AuthController {
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
+        try {
+            // Extract token from Authorization header
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Invalid authorization header"));
+            }
+
+            String token = authHeader.substring(7); // Remove "Bearer " prefix
+
+            // Blacklist the token
+            authService.logout(token);
+
+            LogoutResponse response = new LogoutResponse("Logout successful", true);
+            return ResponseEntity.ok(response);
+
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("error", e.getMessage()));
         }
     }
