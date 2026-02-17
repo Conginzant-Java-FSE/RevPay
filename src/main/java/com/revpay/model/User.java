@@ -15,6 +15,9 @@ public class User extends AuditConfig {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "mt_pin")
+    private String mtPin;
+
     @Column(unique = true)
     private String username;
 
@@ -122,8 +125,18 @@ public class User extends AuditConfig {
         this.username = username;
     }
 
-    public User(Long id, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active) {
+    public String getMtPin() {
+        return mtPin;
+    }
+
+    public void setMtPin(String mtPin) {
+        this.mtPin = mtPin;
+    }
+
+    public User(Long id, String mtPin, String username, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active) {
         this.id = id;
+        this.mtPin = mtPin;
+        this.username = username;
         this.fullName = fullName;
         this.email = email;
         this.phone = phone;

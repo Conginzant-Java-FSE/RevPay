@@ -194,7 +194,7 @@ public class UserService {
         return profile;
     }
 
-    // Get the authendicated user
+    // Get the authenticated user
     private User getLoggedInUser() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -292,6 +292,28 @@ public class UserService {
         bankAccountRepository.save(bankAccount);
 
         logger.info("Bank account updated for user: {}", user.getEmail());
+    }
+
+    // set MTPIN for users
+    @Transactional
+    public void setTransactionPin(SetTransactionPinRequest request) {
+
+        User user = getLoggedInUser();
+
+        if (user.getMtPin() != null) {
+            throw new IllegalStateException("Transaction PIN already set");
+        }
+
+        if (!request.getMtPin().equals(request.getConfirmMtPin())) {
+            throw new IllegalArgumentException("MTPIN and Confirm MTPIN do not match");
+        }
+
+        String encodedPin = passwordEncoder.encode(request.getMtPin());
+
+        user.setMtPin(encodedPin);
+        userRepository.save(user);
+
+        logger.info("Transaction PIN set for user: {}", user.getEmail());
     }
 
 }
