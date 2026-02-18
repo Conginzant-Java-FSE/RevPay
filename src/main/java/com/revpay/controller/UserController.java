@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -78,6 +79,32 @@ public class UserController {
                 new ApiResponse<>(true, "Personal profile and bank account updated successfully");
 
         logger.info("Profile updated successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Set Transaction PIN", description = "Set Money Transaction PIN for logged-in user")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Transaction PIN set successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "PIN validation failed"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            )
+    })
+    @PostMapping("/set-mt-pin")
+    public ResponseEntity<ApiResponse<Void>> setTransactionPin(
+            @Valid @RequestBody SetTransactionPinRequest request) {
+
+        userService.setTransactionPin(request);
+
+        ApiResponse<Void> response = new ApiResponse<>(true, "Transaction PIN set successfully");
 
         return ResponseEntity.ok(response);
     }

@@ -75,4 +75,12 @@ public class GlobalExceptionHandler {
                 .body(response);
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBadRequest(
+            IllegalArgumentException ex) {
+
+        return ResponseEntity.badRequest()
+                .body(new ApiResponse<>(false, ex.getMessage()));
+    }
+
 }
