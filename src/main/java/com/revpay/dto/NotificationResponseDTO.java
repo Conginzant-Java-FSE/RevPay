@@ -9,8 +9,7 @@ public class NotificationResponseDTO {
     private Boolean isRead;
     private LocalDateTime createdAt;
 
-    public NotificationResponseDTO() {
-    }
+    public NotificationResponseDTO() {}
 
     public NotificationResponseDTO(Long notificationId, String message, String type, Boolean isRead,
             LocalDateTime createdAt) {
@@ -21,7 +20,6 @@ public class NotificationResponseDTO {
         this.createdAt = createdAt;
     }
 
-    // Getters and Setters
     public Long getNotificationId() {
         return notificationId;
     }

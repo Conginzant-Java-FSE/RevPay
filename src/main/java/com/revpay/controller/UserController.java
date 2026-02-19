@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -29,6 +30,7 @@ public class UserController {
     }
 
     @Operation(summary = "User Profile Details", description = "Fetched user details by verifying the token passed.")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Details Fetched Successfully", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
@@ -41,6 +43,7 @@ public class UserController {
     }
 
     @Operation(summary = "User Profile Creation", description = "Create the users profile after login.")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile created Successfully", content = @Content(schema = @Schema(implementation = LoginResponse.class))),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Personal profile already exists for this user"),
@@ -62,6 +65,7 @@ public class UserController {
             summary = "Update Personal Profile",
             description = "Update the logged-in user's personal profile and bank details"
     )
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile updated successfully"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Profile does not exist"),
@@ -84,6 +88,7 @@ public class UserController {
     }
 
     @Operation(summary = "Set Transaction PIN", description = "Set Money Transaction PIN for logged-in user")
+    @SecurityRequirement(name = "bearerAuth")
     @ApiResponses(value = {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",
