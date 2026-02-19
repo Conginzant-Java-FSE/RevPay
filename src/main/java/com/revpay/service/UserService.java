@@ -153,6 +153,7 @@ public class UserService {
     }
 
     // verify and change the users password
+    @Transactional
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         logger.info("Forgot password request for: {}", request.getEmailOrPhone());
 
@@ -181,8 +182,25 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
+        createPasswordChangedNotification(user);
+
         logger.info("Password reset successfully for: {}", user.getEmail());
         return new ForgotPasswordResponse("Password reset successfully", true);
+    }
+
+    // Password updated notification
+    private void createPasswordChangedNotification(User user) {
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Your password was changed successfully. If this wasn't you, please contact support immediately.");
+        notification.setType("SECURITY");
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
+
+        logger.info("Password change notification created for: {}", user.getEmail());
     }
 
     // get all users list

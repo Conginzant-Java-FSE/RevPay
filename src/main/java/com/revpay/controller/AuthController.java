@@ -144,4 +144,5 @@ public class AuthController {
         logger.info("Password reset completed for: {}", request.getEmailOrPhone());
         return ResponseEntity.ok(response);
     }
+
 }
