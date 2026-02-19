@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,9 @@ public class UserService {
 
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     public UserService(UserRepository userRepository, PersonalProfileRepository personalProfileRepository,
                        BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder, JwtUtil jwtUtil)
@@ -78,7 +82,24 @@ public class UserService {
 
         createWalletForUser(savedUser);
 
+        createWelcomeNotification(savedUser);
+
+        logger.info("User registered successfully and welcome notification created for {}", savedUser.getEmail());
+
         return new UserRegistrationResponse("User registered successfully");
+    }
+
+    // create welcome notification for new users
+    private void createWelcomeNotification(User user) {
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Welcome to RevPay! Your wallet has been created successfully.");
+        notification.setType("WELCOME");
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
     }
 
     // Create a wallet for the user after registration
