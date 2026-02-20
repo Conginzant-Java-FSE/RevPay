@@ -1,8 +1,15 @@
 package com.revpay.controller;
 
+import com.revpay.dto.ApiResponse;
 import com.revpay.dto.NotificationResponseDTO;
 import com.revpay.service.NotificationService;
 import com.revpay.util.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +21,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/notifications")
 @CrossOrigin(origins = "*")
+@Tag(name = "Notification Management", description = "APIs for Notifications Management")
 public class NotificationController {
 
     @Autowired
@@ -22,6 +30,29 @@ public class NotificationController {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Operation(
+            summary = "Get Unread Notifications",
+            description = "Fetch all unread notifications for the authenticated user"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Unread notifications fetched successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = NotificationResponseDTO.class)
+                    )
+            ),
+
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - Invalid or expired token",
+                    content = @Content
+            )
+
+    })
     @GetMapping("/unread")
     public ResponseEntity<?> getUnreadNotifications(@RequestHeader("Authorization") String token) {
         try {
@@ -48,4 +79,27 @@ public class NotificationController {
                     .body(Map.of("error", "Invalid token or user session: " + e.getMessage()));
         }
     }
+
+    @Operation(
+            summary = "Read All Notifications",
+            description = "Mark all notifications as read for logged-in user"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Notifications updated successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+            )
+    })
+    @GetMapping("/read-all")
+    public ResponseEntity<ApiResponse<Void>> readAllNotifications() {
+        notificationService.readAllNotifications();
+        ApiResponse<Void> response = new ApiResponse<>(true, "Notifications updated successfully");
+        return ResponseEntity.ok(response);
+    }
+
 }
