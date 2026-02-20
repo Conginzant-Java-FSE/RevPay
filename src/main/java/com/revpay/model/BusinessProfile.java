@@ -23,6 +23,9 @@ public class BusinessProfile extends AuditConfig {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Column(columnDefinition = "TEXT")
+    private String invoiceDetails;
+
     @Enumerated(EnumType.STRING)
     private RecordStatus status;
 
@@ -74,14 +77,25 @@ public class BusinessProfile extends AuditConfig {
         this.status = status;
     }
 
-    public BusinessProfile(Long businessId, User user, String businessName, String taxId, String address, RecordStatus status) {
+    public String getInvoiceDetails() {
+        return invoiceDetails;
+    }
+
+    public void setInvoiceDetails(String invoiceDetails) {
+        this.invoiceDetails = invoiceDetails;
+    }
+
+    public BusinessProfile(Long businessId, User user, String businessName, String taxId, String address,
+            String invoiceDetails, RecordStatus status) {
         this.businessId = businessId;
         this.user = user;
         this.businessName = businessName;
         this.taxId = taxId;
         this.address = address;
+        this.invoiceDetails = invoiceDetails;
         this.status = status;
     }
 
-    public BusinessProfile() {}
+    public BusinessProfile() {
+    }
 }

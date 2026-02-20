@@ -43,11 +43,15 @@ public class UserService {
     @Autowired
     private WalletRepository walletRepository;
 
+    @Autowired
+    private BusinessProfileRepository businessProfileRepository;
+
     public UserService(UserRepository userRepository, PersonalProfileRepository personalProfileRepository,
-                       BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder, JwtUtil jwtUtil)
-    {
+            BusinessProfileRepository businessProfileRepository,
+            BankAccountRepository bankAccountRepository, BCryptPasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
         this.userRepository = userRepository;
         this.personalProfileRepository = personalProfileRepository;
+        this.businessProfileRepository = businessProfileRepository;
         this.bankAccountRepository = bankAccountRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -119,8 +123,7 @@ public class UserService {
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
-                user.getAccountType().toString()
-        );
+                user.getAccountType().toString());
 
         // Return login response
         return new LoginResponse(
@@ -314,6 +317,41 @@ public class UserService {
         userRepository.save(user);
 
         logger.info("Transaction PIN set for user: {}", user.getEmail());
+    }
+
+    // create business profile with bank details
+    @Transactional
+    public void createBusinessProfileWithBank(BusinessProfileFullRequest request) {
+
+        User user = getLoggedInUser();
+
+        if (businessProfileRepository.existsByUser(user)) {
+            logger.warn("Business profile already exists for user: {}", user.getEmail());
+            throw new IllegalStateException("Business profile already exists for this user");
+        }
+
+        BusinessProfile profile = new BusinessProfile();
+        profile.setUser(user);
+        profile.setBusinessName(request.getBusinessName());
+        profile.setTaxId(request.getTaxId());
+        profile.setAddress(request.getAddress());
+        profile.setInvoiceDetails(request.getInvoiceDetails());
+        profile.setStatus(RecordStatus.ACTIVE);
+
+        businessProfileRepository.save(profile);
+
+        BankAccount bankAccount = new BankAccount();
+        bankAccount.setUser(user);
+        bankAccount.setAccountHolderName(request.getAccountHolderName());
+        bankAccount.setBankName(request.getBankName());
+        bankAccount.setAccountNumber(request.getAccountNumber());
+        bankAccount.setIfscCode(request.getIfscCode());
+        bankAccount.setIsPrimary(request.getIsPrimary());
+        bankAccount.setStatus(RecordStatus.ACTIVE);
+
+        bankAccountRepository.save(bankAccount);
+
+        logger.info("Business profile and bank account created for user: {}", user.getEmail());
     }
 
 }
