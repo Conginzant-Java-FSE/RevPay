@@ -93,4 +93,17 @@ public class JwtUtil {
         }
     }
 
+    public String generateResetToken(Long userId) {
+
+        long resetExpiration = 5 * 60 * 1000; // 5 minutes
+
+        return Jwts.builder()
+                .setSubject("RESET_PASSWORD")
+                .claim("userId", userId)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + resetExpiration))
+                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
 }

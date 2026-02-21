@@ -145,4 +145,33 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/forgot-password/verify-identity")
+    public ResponseEntity<VerifyIdentityResponse> verifyIdentity(
+            @RequestBody VerifyIdentityRequest request) {
+
+        VerifyIdentityResponse response = authService.verifyIdentity(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password/validate-security")
+    public ResponseEntity<ValidateSecurityResponse> validateSecurity(
+            @RequestBody ValidateSecurityRequest request) {
+
+        ValidateSecurityResponse response = authService.validateSecurity(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<com.revpay.dto.ApiResponse<Void>> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
+
+        authService.resetPassword(request);
+
+        com.revpay.dto.ApiResponse<Void> response =
+                new com.revpay.dto.ApiResponse<>(true, "Password reset successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }
