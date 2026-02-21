@@ -19,9 +19,11 @@ public class Notification {
 
     private String type;
 
-    private Boolean isRead;
+    @Column(nullable = false)
+    private Boolean isRead = false;
 
-    private LocalDateTime createdAt;
+    @Column(nullable = false)
+    private LocalDateTime createdAt = LocalDateTime.now();
 
     public Long getNotificationId() {
         return notificationId;

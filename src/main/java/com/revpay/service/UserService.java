@@ -17,6 +17,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -42,6 +43,9 @@ public class UserService {
 
     @Autowired
     private WalletRepository walletRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
 
     @Autowired
     private BusinessProfileRepository businessProfileRepository;
@@ -82,7 +86,24 @@ public class UserService {
 
         createWalletForUser(savedUser);
 
+        createWelcomeNotification(savedUser);
+
+        logger.info("User registered successfully and welcome notification created for {}", savedUser.getEmail());
+
         return new UserRegistrationResponse("User registered successfully");
+    }
+
+    // create welcome notification for new users
+    private void createWelcomeNotification(User user) {
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Welcome to RevPay! Your wallet has been created successfully.");
+        notification.setType("WELCOME");
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
     }
 
     // Create a wallet for the user after registration
@@ -123,7 +144,8 @@ public class UserService {
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
-                user.getAccountType().toString());
+                user.getAccountType().toString()
+        );
 
         // Return login response
         return new LoginResponse(
@@ -135,6 +157,7 @@ public class UserService {
     }
 
     // verify and change the users password
+    @Transactional
     public ForgotPasswordResponse forgotPassword(ForgotPasswordRequest request) {
         logger.info("Forgot password request for: {}", request.getEmailOrPhone());
 
@@ -163,8 +186,25 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
+        createPasswordChangedNotification(user);
+
         logger.info("Password reset successfully for: {}", user.getEmail());
         return new ForgotPasswordResponse("Password reset successfully", true);
+    }
+
+    // Password updated notification
+    private void createPasswordChangedNotification(User user) {
+
+        Notification notification = new Notification();
+        notification.setUser(user);
+        notification.setMessage("Your password was changed successfully. If this wasn't you, please contact support immediately.");
+        notification.setType("SECURITY");
+        notification.setRead(false);
+        notification.setCreatedAt(LocalDateTime.now());
+
+        notificationRepository.save(notification);
+
+        logger.info("Password change notification created for: {}", user.getEmail());
     }
 
     // get all users list

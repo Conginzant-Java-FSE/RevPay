@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -16,7 +17,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -73,6 +73,34 @@ public class AuthController {
         }
     }
 
+    @Operation(
+            summary = "Logout User",
+            description = "Invalidate the JWT token by blacklisting it"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Logout successful",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = LogoutResponse.class)
+                    )
+            ),
+
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid authorization header or token already invalidated",
+                    content = @Content
+            ),
+
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - Invalid or expired token",
+                    content = @Content
+            )
+    })
     @PostMapping("/logout")
     public ResponseEntity<?> logout(@RequestHeader("Authorization") String authHeader) {
         try {
@@ -116,4 +144,5 @@ public class AuthController {
         logger.info("Password reset completed for: {}", request.getEmailOrPhone());
         return ResponseEntity.ok(response);
     }
+
 }
