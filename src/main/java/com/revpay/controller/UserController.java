@@ -114,4 +114,22 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Business Profile Creation", description = "Create the users business profile after login.")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Business profile created Successfully", content = @Content(schema = @Schema(implementation = ApiResponse.class))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Business profile already exists for this user"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    @PostMapping("/create-business-profile")
+    public ResponseEntity<ApiResponse<Void>> createBusinessProfileWithBank(
+            @Valid @RequestBody BusinessProfileFullRequest request) {
+
+        userService.createBusinessProfileWithBank(request);
+
+        ApiResponse<Void> response = new ApiResponse<>(true,
+                "Business profile and bank account created successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
 }

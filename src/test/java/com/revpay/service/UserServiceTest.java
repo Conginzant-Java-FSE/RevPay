@@ -7,7 +7,15 @@ import com.revpay.exception.UserNotFoundException;
 import com.revpay.model.User;
 import com.revpay.enums.AccountType;
 import com.revpay.repository.UserRepository;
+import com.revpay.repository.BusinessProfileRepository;
+import com.revpay.repository.BankAccountRepository;
+import com.revpay.dto.BusinessProfileFullRequest;
+import com.revpay.model.BusinessProfile;
+import com.revpay.model.BankAccount;
 import com.revpay.util.JwtUtil;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,6 +39,12 @@ class UserServiceTest {
 
     @Mock
     private BCryptPasswordEncoder passwordEncoder;
+
+    @Mock
+    private BusinessProfileRepository businessProfileRepository;
+
+    @Mock
+    private BankAccountRepository bankAccountRepository;
 
     @Mock
     private JwtUtil jwtUtil;
@@ -102,5 +116,55 @@ class UserServiceTest {
 
         assertEquals("Security answer is incorrect", exception.getMessage());
         verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("Create Business Profile - Success")
+    void createBusinessProfileWithBank_Success() {
+        BusinessProfileFullRequest request = new BusinessProfileFullRequest();
+        request.setBusinessName("Test Business");
+        request.setTaxId("TAX123");
+        request.setAddress("Business Address");
+        request.setAccountHolderName("John Doe");
+        request.setBankName("Test Bank");
+        request.setAccountNumber("1234567890");
+        request.setIfscCode("TEST001");
+        request.setIsPrimary(true);
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("john@example.com");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
+        when(businessProfileRepository.existsByUser(testUser)).thenReturn(false);
+
+        userService.createBusinessProfileWithBank(request);
+
+        verify(businessProfileRepository).save(any(BusinessProfile.class));
+        verify(bankAccountRepository).save(any(BankAccount.class));
+    }
+
+    @Test
+    @DisplayName("Create Business Profile - Failure (Duplicate)")
+    void createBusinessProfileWithBank_Duplicate_ShouldThrowException() {
+        BusinessProfileFullRequest request = new BusinessProfileFullRequest();
+        request.setBusinessName("Test Business");
+
+        Authentication auth = mock(Authentication.class);
+        when(auth.getName()).thenReturn("john@example.com");
+        SecurityContext securityContext = mock(SecurityContext.class);
+        when(securityContext.getAuthentication()).thenReturn(auth);
+        SecurityContextHolder.setContext(securityContext);
+
+        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(testUser));
+        when(businessProfileRepository.existsByUser(testUser)).thenReturn(true);
+
+        IllegalStateException exception = assertThrows(IllegalStateException.class,
+                () -> userService.createBusinessProfileWithBank(request));
+
+        assertEquals("Business profile already exists for this user", exception.getMessage());
+        verify(businessProfileRepository, never()).save(any());
     }
 }
