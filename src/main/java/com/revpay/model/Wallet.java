@@ -19,9 +19,11 @@ public class Wallet extends AuditConfig {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    private BigDecimal balance;
+    @Column(nullable = false, precision = 38, scale = 2)
+    private BigDecimal balance = BigDecimal.ZERO;
 
-    private String currency;
+    @Column(nullable = false)
+    private String currency = "INR";
 
     public Long getWalletId() {
         return walletId;

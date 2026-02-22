@@ -1,8 +1,5 @@
 package com.revpay.enums;
 
 public enum LoanStatus {
-    PENDING,
-    APPROVED,
-    REJECTED,
-    CLOSED
+    PENDING, APPROVED, REJECTED, ACTIVE, CLOSED
 }

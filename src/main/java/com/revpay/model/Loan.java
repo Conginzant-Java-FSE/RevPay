@@ -1,98 +1,99 @@
 package com.revpay.model;
 
-import com.revpay.config.AuditConfig;
 import com.revpay.enums.LoanStatus;
 import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "loans")
-public class Loan extends AuditConfig {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Loan {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "loan_id")
     private Long loanId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
-
+    @Column(name = "loan_amount", nullable = false, precision = 38, scale = 2)
     private BigDecimal loanAmount;
 
-    private BigDecimal interestRate;
-
-    private Integer tenureMonths;
-
+    @Column(name = "emi_amount", precision = 38, scale = 2)
     private BigDecimal emiAmount;
 
+    @Column(name = "interest_rate", precision = 38, scale = 2)
+    private BigDecimal interestRate;
+
+    @Column(name = "tenure_months", nullable = false)
+    private Integer tenureMonths;
+
+    @Column(name = "total_interest", precision = 38, scale = 2)
+    private BigDecimal totalInterest;
+
+    @Column(name = "total_repayable", precision = 38, scale = 2)
+    private BigDecimal totalRepayable;
+
+    @Column(name = "amount_repaid", precision = 38, scale = 2)
+    private BigDecimal amountRepaid = BigDecimal.ZERO;
+
+    @Column(name = "outstanding_balance", precision = 38, scale = 2)
+    private BigDecimal outstandingBalance;
+
+    @Column(nullable = false)
+    private String purpose;
+
+    @Column(name = "annual_revenue", precision = 38, scale = 2)
+    private BigDecimal annualRevenue;
+
+    @Column(name = "years_in_business")
+    private Integer yearsInBusiness;
+
+    @Column(name = "employee_count")
+    private Integer employeeCount;
+
+    private String collateral;
+
     @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
     private LoanStatus status;
 
-    public Long getLoanId() {
-        return loanId;
-    }
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
 
-    public void setLoanId(Long loanId) {
-        this.loanId = loanId;
-    }
+    @Column(name = "next_due_date")
+    private LocalDate nextDueDate;
 
-    public User getUser() {
-        return user;
-    }
+    @Column(name = "approved_at")
+    private LocalDateTime approvedAt;
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+    @Column(name = "rejected_at")
+    private LocalDateTime rejectedAt;
 
-    public BigDecimal getLoanAmount() {
-        return loanAmount;
-    }
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    public void setLoanAmount(BigDecimal loanAmount) {
-        this.loanAmount = loanAmount;
-    }
+    @Column(name = "created_by")
+    private String createdBy;
 
-    public BigDecimal getInterestRate() {
-        return interestRate;
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    public void setInterestRate(BigDecimal interestRate) {
-        this.interestRate = interestRate;
-    }
+    @Column(name = "updated_by")
+    private String updatedBy;
 
-    public Integer getTenureMonths() {
-        return tenureMonths;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    public void setTenureMonths(Integer tenureMonths) {
-        this.tenureMonths = tenureMonths;
-    }
-
-    public BigDecimal getEmiAmount() {
-        return emiAmount;
-    }
-
-    public void setEmiAmount(BigDecimal emiAmount) {
-        this.emiAmount = emiAmount;
-    }
-
-    public LoanStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(LoanStatus status) {
-        this.status = status;
-    }
-
-    public Loan(Long loanId, User user, BigDecimal loanAmount, BigDecimal interestRate, Integer tenureMonths, BigDecimal emiAmount, LoanStatus status) {
-        this.loanId = loanId;
-        this.user = user;
-        this.loanAmount = loanAmount;
-        this.interestRate = interestRate;
-        this.tenureMonths = tenureMonths;
-        this.emiAmount = emiAmount;
-        this.status = status;
-    }
-
-    public Loan() {}
 }
