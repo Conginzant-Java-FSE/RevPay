@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.*;
+import com.revpay.enums.NotificationType;
 import com.revpay.exception.SecurityAnswerMismatchException;
 import com.revpay.exception.UserNotFoundException;
 import com.revpay.model.BlacklistedToken;
@@ -149,8 +150,8 @@ public class AuthService {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage("Your password was changed successfully. If this wasn't you, please contact support immediately.");
-        notification.setType("SECURITY");
-        notification.setRead(false);
+        notification.setType(NotificationType.SECURITY_ALERT);
+        notification.setIsRead(false);
         notification.setCreatedAt(LocalDateTime.now());
 
         notificationRepository.save(notification);

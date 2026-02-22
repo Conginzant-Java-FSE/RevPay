@@ -99,8 +99,8 @@ public class UserService {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage("Welcome to RevPay! Your wallet has been created successfully.");
-        notification.setType("WELCOME");
-        notification.setRead(false);
+        notification.setType(NotificationType.GENERAL);
+        notification.setIsRead(false);
         notification.setCreatedAt(LocalDateTime.now());
 
         notificationRepository.save(notification);
@@ -198,8 +198,8 @@ public class UserService {
         Notification notification = new Notification();
         notification.setUser(user);
         notification.setMessage("Your password was changed successfully. If this wasn't you, please contact support immediately.");
-        notification.setType("SECURITY");
-        notification.setRead(false);
+        notification.setType(NotificationType.SECURITY_ALERT);
+        notification.setIsRead(false);
         notification.setCreatedAt(LocalDateTime.now());
 
         notificationRepository.save(notification);
@@ -270,7 +270,6 @@ public class UserService {
         profile.setDob(request.getDob());
         profile.setAddress(request.getAddress());
         profile.setStatus(RecordStatus.ACTIVE);
-
         personalProfileRepository.save(profile);
 
         BankAccount bankAccount = new BankAccount();
@@ -279,9 +278,9 @@ public class UserService {
         bankAccount.setBankName(request.getBankName());
         bankAccount.setAccountNumber(request.getAccountNumber());
         bankAccount.setIfscCode(request.getIfscCode());
-        bankAccount.setIsPrimary(request.getIsPrimary());
+        bankAccount.setAccountType(request.getAccountType());
+        bankAccount.setIsPrimary(request.getIsPrimary() != null ? request.getIsPrimary() : true);
         bankAccount.setStatus(RecordStatus.ACTIVE);
-
         bankAccountRepository.save(bankAccount);
     }
 
@@ -370,13 +369,20 @@ public class UserService {
             throw new IllegalStateException("Business profile already exists for this user");
         }
 
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            user.setUsername(request.getUsername());
+            userRepository.save(user);
+        }
+
         BusinessProfile profile = new BusinessProfile();
         profile.setUser(user);
         profile.setBusinessName(request.getBusinessName());
+        profile.setBusinessType(request.getBusinessType());
         profile.setTaxId(request.getTaxId());
         profile.setAddress(request.getAddress());
-        profile.setInvoiceDetails(request.getInvoiceDetails());
-        profile.setStatus(RecordStatus.ACTIVE);
+        profile.setContact_phone(request.getContactPhone());
+        profile.setWebsite(request.getWebsite());
+        profile.setStatus(RecordStatus.ACTIVE); // requires admin approval
 
         businessProfileRepository.save(profile);
 
@@ -386,7 +392,8 @@ public class UserService {
         bankAccount.setBankName(request.getBankName());
         bankAccount.setAccountNumber(request.getAccountNumber());
         bankAccount.setIfscCode(request.getIfscCode());
-        bankAccount.setIsPrimary(request.getIsPrimary());
+        bankAccount.setAccountType(request.getAccountType());
+        bankAccount.setIsPrimary(request.getIsPrimary() != null ? request.getIsPrimary() : true);
         bankAccount.setStatus(RecordStatus.ACTIVE);
 
         bankAccountRepository.save(bankAccount);

@@ -15,5 +15,8 @@ public enum NotificationType {
     INVOICE_SENT,
     INVOICE_PAID,
     INVOICE_OVERDUE,
-    GENERAL
+    GENERAL,
+    SECURITY_ALERT,
+    PROMOTIONAL,
+    SYSTEM_UPDATE
 }
