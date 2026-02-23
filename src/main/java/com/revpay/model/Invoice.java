@@ -1,101 +1,85 @@
 package com.revpay.model;
 
-import com.revpay.config.AuditConfig;
 import com.revpay.enums.InvoiceStatus;
+import com.revpay.enums.PaymentTerms;
 import jakarta.persistence.*;
+import lombok.*;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "invoices")
-public class Invoice extends AuditConfig {
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Invoice {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    @Column(name = "invoice_number", unique = true)
+    private String invoiceNumber;
 
+    @Column(name = "customer_name")
     private String customerName;
 
+    @Column(name = "customer_email")
     private String customerEmail;
 
-    private BigDecimal totalAmount;
+    @Column(name = "customer_address", columnDefinition = "TEXT")
+    private String customerAddress;
 
-    @Enumerated(EnumType.STRING)
-    private InvoiceStatus status;
-
+    @Column(name = "due_date")
     private LocalDate dueDate;
 
-    public Long getId() {
-        return id;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_terms")
+    private PaymentTerms paymentTerms;
 
-    public void setId(Long id) {
-        this.id = id;
-    }
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private InvoiceStatus status;
 
-    public User getUser() {
-        return user;
-    }
+    @Column(name = "total_amount", precision = 38, scale = 2)
+    private BigDecimal totalAmount;
 
-    public void setUser(User user) {
-        this.user = user;
-    }
+    @Column(name = "notes", columnDefinition = "TEXT")
+    private String notes;
 
-    public String getCustomerName() {
-        return customerName;
-    }
+    @Column(name = "sent_at")
+    private LocalDateTime sentAt;
 
-    public void setCustomerName(String customerName) {
-        this.customerName = customerName;
-    }
+    @Column(name = "paid_at")
+    private LocalDateTime paidAt;
 
-    public String getCustomerEmail() {
-        return customerEmail;
-    }
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 
-    public void setCustomerEmail(String customerEmail) {
-        this.customerEmail = customerEmail;
-    }
+    @Column(name = "created_by")
+    private String createdBy;
 
-    public BigDecimal getTotalAmount() {
-        return totalAmount;
-    }
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
 
-    public void setTotalAmount(BigDecimal totalAmount) {
-        this.totalAmount = totalAmount;
-    }
+    @Column(name = "updated_by")
+    private String updatedBy;
 
-    public InvoiceStatus getStatus() {
-        return status;
-    }
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-    public void setStatus(InvoiceStatus status) {
-        this.status = status;
-    }
+    @OneToMany(mappedBy = "invoice", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<InvoiceLineItem> lineItems;
 
-    public LocalDate getDueDate() {
-        return dueDate;
-    }
-
-    public void setDueDate(LocalDate dueDate) {
-        this.dueDate = dueDate;
-    }
-
-    public Invoice(Long id, User user, String customerName, String customerEmail, BigDecimal totalAmount, InvoiceStatus status, LocalDate dueDate) {
-        this.id = id;
-        this.user = user;
-        this.customerName = customerName;
-        this.customerEmail = customerEmail;
-        this.totalAmount = totalAmount;
-        this.status = status;
-        this.dueDate = dueDate;
-    }
-
-    public Invoice() {}
 }
 

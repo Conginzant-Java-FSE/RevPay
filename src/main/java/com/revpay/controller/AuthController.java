@@ -124,6 +124,7 @@ public class AuthController {
         }
     }
 
+    @Operation(summary = "All Registered User", description = "Fetch all registered users with their details..")
     @GetMapping("/users")
     public ResponseEntity<?> getAllUsers() {
         List<UserListResponse> users = userService.getAllUsers();
@@ -145,4 +146,72 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Verify User Identity",
+            description = "Verifies user by email or phone and returns the configured security question"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", description = "Security question fetched successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = VerifyIdentityResponse.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content),
+            @ApiResponse(responseCode = "400", description = "Account inactive", content = @Content)
+    })
+    @PostMapping("/forgot-password/verify-identity")
+    public ResponseEntity<VerifyIdentityResponse> verifyIdentity(
+            @RequestBody VerifyIdentityRequest request) {
+
+        VerifyIdentityResponse response = authService.verifyIdentity(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Validate Security Answer",
+            description = "Validates the security question and answer and generates a short-lived reset token"
+    )
+    @ApiResponses(value = {
+            @ApiResponse(
+                    responseCode = "200", description = "Security answer validated successfully",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ValidateSecurityResponse.class)
+                    )
+            ),
+            @ApiResponse(responseCode = "400", description = "Security question or answer incorrect", content = @Content),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content)
+    })
+    @PostMapping("/forgot-password/validate-security")
+    public ResponseEntity<ValidateSecurityResponse> validateSecurity(
+            @RequestBody ValidateSecurityRequest request) {
+
+        ValidateSecurityResponse response = authService.validateSecurity(request);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Reset Password",
+            description = "Resets the user password using a short-lived reset token"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Password reset successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid or expired reset token", content = @Content),
+            @ApiResponse(responseCode = "404", description = "User not found", content = @Content
+            )
+    })
+    @PostMapping("/forgot-password/reset")
+    public ResponseEntity<com.revpay.dto.ApiResponse<Void>> resetPassword(
+            @RequestBody ResetPasswordRequest request) {
+
+        authService.resetPassword(request);
+
+        com.revpay.dto.ApiResponse<Void> response =
+                new com.revpay.dto.ApiResponse<>(true, "Password reset successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }

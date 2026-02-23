@@ -41,7 +41,7 @@ public class NotificationService {
                 notification.getNotificationId(),
                 notification.getMessage(),
                 notification.getType(),
-                notification.getRead(),
+                notification.getIsRead(),
                 notification.getCreatedAt());
     }
 

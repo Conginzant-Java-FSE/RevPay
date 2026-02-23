@@ -1,18 +1,34 @@
 package com.revpay.dto;
 
+import com.revpay.enums.BankAccountType;
+import com.revpay.enums.BusinessType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Getter;
+import lombok.Setter;
 
+@Getter
+@Setter
 public class BusinessProfileFullRequest {
+
+    @NotBlank(message = "Username is Required.")
+    private String username;
 
     @NotBlank(message = "Business name is mandatory")
     private String businessName;
+
+    @NotNull
+    private BusinessType businessType;
 
     @NotBlank(message = "Tax ID is mandatory")
     private String taxId;
 
     @NotBlank(message = "Address is mandatory")
     private String address;
+
+    private String contactPhone;
+
+    private String website;
 
     private String invoiceDetails;
 
@@ -28,78 +44,10 @@ public class BusinessProfileFullRequest {
     @NotBlank(message = "IFSC code is mandatory")
     private String ifscCode;
 
+    @NotNull
+    private BankAccountType accountType;
+
     @NotNull(message = "Primary status is mandatory")
-    private Boolean isPrimary;
+    private Boolean isPrimary = true;
 
-    public String getBusinessName() {
-        return businessName;
-    }
-
-    public void setBusinessName(String businessName) {
-        this.businessName = businessName;
-    }
-
-    public String getTaxId() {
-        return taxId;
-    }
-
-    public void setTaxId(String taxId) {
-        this.taxId = taxId;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public String getInvoiceDetails() {
-        return invoiceDetails;
-    }
-
-    public void setInvoiceDetails(String invoiceDetails) {
-        this.invoiceDetails = invoiceDetails;
-    }
-
-    public String getAccountHolderName() {
-        return accountHolderName;
-    }
-
-    public void setAccountHolderName(String accountHolderName) {
-        this.accountHolderName = accountHolderName;
-    }
-
-    public String getBankName() {
-        return bankName;
-    }
-
-    public void setBankName(String bankName) {
-        this.bankName = bankName;
-    }
-
-    public String getAccountNumber() {
-        return accountNumber;
-    }
-
-    public void setAccountNumber(String accountNumber) {
-        this.accountNumber = accountNumber;
-    }
-
-    public String getIfscCode() {
-        return ifscCode;
-    }
-
-    public void setIfscCode(String ifscCode) {
-        this.ifscCode = ifscCode;
-    }
-
-    public Boolean getIsPrimary() {
-        return isPrimary;
-    }
-
-    public void setIsPrimary(Boolean isPrimary) {
-        this.isPrimary = isPrimary;
-    }
 }

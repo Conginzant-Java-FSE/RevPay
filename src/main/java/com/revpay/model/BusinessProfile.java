@@ -1,9 +1,18 @@
 package com.revpay.model;
 
 import com.revpay.config.AuditConfig;
+import com.revpay.enums.BusinessType;
 import com.revpay.enums.RecordStatus;
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "business_profile")
 public class BusinessProfile extends AuditConfig {
@@ -23,79 +32,17 @@ public class BusinessProfile extends AuditConfig {
     @Column(columnDefinition = "TEXT")
     private String address;
 
+    @Enumerated(EnumType.STRING)
+    private BusinessType businessType;
+
+    private String contact_phone;
+
+    private String website;
+
     @Column(columnDefinition = "TEXT")
     private String invoiceDetails;
 
     @Enumerated(EnumType.STRING)
     private RecordStatus status;
 
-    public Long getBusinessId() {
-        return businessId;
-    }
-
-    public void setBusinessId(Long businessId) {
-        this.businessId = businessId;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public String getBusinessName() {
-        return businessName;
-    }
-
-    public void setBusinessName(String businessName) {
-        this.businessName = businessName;
-    }
-
-    public String getTaxId() {
-        return taxId;
-    }
-
-    public void setTaxId(String taxId) {
-        this.taxId = taxId;
-    }
-
-    public String getAddress() {
-        return address;
-    }
-
-    public void setAddress(String address) {
-        this.address = address;
-    }
-
-    public RecordStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(RecordStatus status) {
-        this.status = status;
-    }
-
-    public String getInvoiceDetails() {
-        return invoiceDetails;
-    }
-
-    public void setInvoiceDetails(String invoiceDetails) {
-        this.invoiceDetails = invoiceDetails;
-    }
-
-    public BusinessProfile(Long businessId, User user, String businessName, String taxId, String address,
-            String invoiceDetails, RecordStatus status) {
-        this.businessId = businessId;
-        this.user = user;
-        this.businessName = businessName;
-        this.taxId = taxId;
-        this.address = address;
-        this.invoiceDetails = invoiceDetails;
-        this.status = status;
-    }
-
-    public BusinessProfile() {
-    }
 }

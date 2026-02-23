@@ -3,8 +3,18 @@ package com.revpay.model;
 import com.revpay.config.AuditConfig;
 import com.revpay.enums.RequestStatus;
 import jakarta.persistence.*;
-import java.math.BigDecimal;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
 @Entity
 @Table(name = "money_requests")
 public class MoneyRequest extends AuditConfig {
@@ -21,6 +31,7 @@ public class MoneyRequest extends AuditConfig {
     @JoinColumn(name = "requestee_id")
     private User requestee;
 
+    @Column(nullable = false, precision = 38, scale = 2)
     private BigDecimal amount;
 
     private String purpose;
@@ -28,62 +39,6 @@ public class MoneyRequest extends AuditConfig {
     @Enumerated(EnumType.STRING)
     private RequestStatus status;
 
-    public Long getRequestId() {
-        return requestId;
-    }
+    private LocalDateTime expiresAt;
 
-    public void setRequestId(Long requestId) {
-        this.requestId = requestId;
-    }
-
-    public User getRequester() {
-        return requester;
-    }
-
-    public void setRequester(User requester) {
-        this.requester = requester;
-    }
-
-    public User getRequestee() {
-        return requestee;
-    }
-
-    public void setRequestee(User requestee) {
-        this.requestee = requestee;
-    }
-
-    public BigDecimal getAmount() {
-        return amount;
-    }
-
-    public void setAmount(BigDecimal amount) {
-        this.amount = amount;
-    }
-
-    public String getPurpose() {
-        return purpose;
-    }
-
-    public void setPurpose(String purpose) {
-        this.purpose = purpose;
-    }
-
-    public RequestStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(RequestStatus status) {
-        this.status = status;
-    }
-
-    public MoneyRequest(Long requestId, User requester, User requestee, BigDecimal amount, String purpose, RequestStatus status) {
-        this.requestId = requestId;
-        this.requester = requester;
-        this.requestee = requestee;
-        this.amount = amount;
-        this.purpose = purpose;
-        this.status = status;
-    }
-
-    public MoneyRequest() {}
 }
