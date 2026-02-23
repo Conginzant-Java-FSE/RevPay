@@ -214,4 +214,22 @@ public class AuthController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(
+            summary = "Get Security Question",
+            description = "Returns the security question the logged-in user set during registration."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Security question retrieved successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    @GetMapping("/security-question")
+    public ResponseEntity<ApiDataResponse> getSecurityQuestion() {
+
+        ApiDataResponse data = userService.getSecurityQuestion();
+
+        return ResponseEntity.ok(data);
+    }
 }
