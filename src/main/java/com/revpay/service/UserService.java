@@ -401,7 +401,7 @@ public class UserService {
         logger.info("Business profile and bank account created for user: {}", user.getEmail());
     }
 
-    public ApiDataResponse getSecurityQuestion() {
+    public SecurityQuestionResponse getSecurityQuestion() {
 
         User user = getLoggedInUser();
 
@@ -409,7 +409,7 @@ public class UserService {
             throw new IllegalStateException("No security question set for this user");
         }
 
-        return new ApiDataResponse(true, "Security question retrieved successfully",user.getSecurityQuestion());
+        return new SecurityQuestionResponse(user.getSecurityQuestion());
     }
 
 }
