@@ -1,7 +1,9 @@
 package com.revpay.controller;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.ApiDataResponse;
 import com.revpay.dto.ApiResponse;
+import com.revpay.dto.WalletBalanceResponse;
 import com.revpay.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -37,6 +39,21 @@ public class WalletController {
         walletService.addFunds(request);
 
         ApiResponse<Void> response = new ApiResponse<>(true, "Funds added successfully");
+
+        return ResponseEntity.ok(response);
+    }
+    @Operation(
+            summary = "Get Wallet Balance",
+            description = "Returns the current wallet balance and currency"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/balance")
+    public ResponseEntity<ApiDataResponse<WalletBalanceResponse>> getWalletBalance() {
+
+        WalletBalanceResponse data = walletService.getWalletBalance();
+
+        ApiDataResponse<WalletBalanceResponse> response =
+                new ApiDataResponse<>(true, "Wallet balance fetched successfully", data);
 
         return ResponseEntity.ok(response);
     }
