@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.BankAccountResponse;
 import com.revpay.enums.NotificationType;
 import com.revpay.enums.RecordStatus;
 import com.revpay.enums.TransactionStatus;
@@ -108,5 +109,42 @@ public class WalletService {
     private String getLast4(String accountNumber) {
         if (accountNumber == null || accountNumber.length() < 4) return "****";
         return accountNumber.substring(accountNumber.length() - 4);
+    }
+
+    public BankAccountResponse getLinkedBankAccount() {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        BankAccount bankAccount = bankAccountRepository
+                .findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() ->
+                        new IllegalStateException("No primary bank account linked"));
+
+        String maskedAccount = maskAccountNumber(bankAccount.getAccountNumber());
+
+        return new BankAccountResponse(
+                bankAccount.getBankName(),
+                maskedAccount,
+                bankAccount.getAccountType()
+        );
+    }
+    private String maskAccountNumber(String accountNumber) {
+
+        if (accountNumber == null || accountNumber.length() < 4) {
+            return "****";
+        }
+
+        int visibleDigits = 4;
+        int length = accountNumber.length();
+
+        return "*".repeat(length - visibleDigits)
+                + accountNumber.substring(length - visibleDigits);
     }
 }

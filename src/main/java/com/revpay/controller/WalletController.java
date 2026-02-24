@@ -1,7 +1,9 @@
 package com.revpay.controller;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.ApiDataResponse;
 import com.revpay.dto.ApiResponse;
+import com.revpay.dto.BankAccountResponse;
 import com.revpay.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -37,6 +39,25 @@ public class WalletController {
         walletService.addFunds(request);
 
         ApiResponse<Void> response = new ApiResponse<>(true, "Funds added successfully");
+
+        return ResponseEntity.ok(response);
+    }
+    @Operation(
+            summary = "Get Linked Bank Account",
+            description = "Fetches the primary linked bank account for withdrawals. Account number is masked."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/bank-account")
+    public ResponseEntity<ApiDataResponse<BankAccountResponse>> getLinkedBankAccount() {
+
+        BankAccountResponse data = walletService.getLinkedBankAccount();
+
+        ApiDataResponse<BankAccountResponse> response =
+                new ApiDataResponse<>(
+                        true,
+                        "Bank account fetched successfully",
+                        data
+                );
 
         return ResponseEntity.ok(response);
     }
