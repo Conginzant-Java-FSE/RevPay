@@ -189,5 +189,35 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+    @Operation(
+            summary = "Change Password",
+            description = "Allows an authenticated user to change their password. " +
+                    "Requires the current password for verification before applying the new one."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Password changed successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Current password is incorrect / passwords do not match / validation error"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - invalid or missing token"
+            )
+    })
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
 
+        userService.changePassword(request);
+
+        ApiResponse<Void> response =
+                new ApiResponse<>(true, "Operation completed successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }

@@ -81,8 +81,8 @@ public class UserService {
         user.setSecurityQuestion(request.getSecurityQuestion());
         user.setSecurityAnswer(passwordEncoder.encode(request.getSecurityAnswer()));
         user.setAccountType(request.getAccountType() != null ? request.getAccountType() : AccountType.PERSONAL);
-
         user.setActive(true);
+
         User savedUser = userRepository.save(user);
 
         createWalletForUser(savedUser);
@@ -524,6 +524,34 @@ public class UserService {
 
         businessProfileRepository.save(profile);
     }
+    @Transactional
+    public void changePassword(ChangePasswordRequest request) {
 
+        User user = getLoggedInUser();
+
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect.");
+        }
+
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password must be different from the current password.");
+        }
+
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("New password and confirm password do not match.");
+        }
+
+
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+
+        createPasswordChangedNotification(user);
+
+        logger.info("Password changed successfully for user: {}", user.getEmail());
+    }
 
 }
