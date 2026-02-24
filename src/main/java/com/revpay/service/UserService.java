@@ -489,5 +489,40 @@ public class UserService {
         }
         return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
+    @Transactional
+    public void updateBusinessProfile(BusinessProfileUpdateRequest request) {
+
+        User user = getLoggedInUser();
+
+        // Ensure user is BUSINESS account
+        if (user.getAccountType() != AccountType.BUSINESS) {
+            throw new IllegalStateException("Only business users can update business profile");
+        }
+
+        BusinessProfile profile = businessProfileRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Business profile does not exist"));
+
+        if (request.getBusinessName() != null) {
+            profile.setBusinessName(request.getBusinessName());
+        }
+
+        if (request.getBusinessType() != null) {
+            profile.setBusinessType(request.getBusinessType());
+        }
+
+        if (request.getTaxId() != null) {
+            profile.setTaxId(request.getTaxId());
+        }
+
+        if (request.getContactPhone() != null) {
+            profile.setContact_phone(request.getContactPhone());
+        }
+
+        if (request.getWebsite() != null) {
+            profile.setWebsite(request.getWebsite());
+        }
+
+        businessProfileRepository.save(profile);
+    }
 
 }

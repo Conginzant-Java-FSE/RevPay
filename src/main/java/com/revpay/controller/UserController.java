@@ -173,5 +173,21 @@ public class UserController {
 
         return ResponseEntity.ok(response);
     }
+    @Operation(
+            summary = "Update Business Profile",
+            description = "Allows business users to update their business details"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @PutMapping("/profile/business/update")
+    public ResponseEntity<ApiResponse<Void>> updateBusinessProfile(
+            @RequestBody BusinessProfileUpdateRequest request) {
+
+        userService.updateBusinessProfile(request);
+
+        ApiResponse<Void> response =
+                new ApiResponse<>(true, "Operation completed successfully");
+
+        return ResponseEntity.ok(response);
+    }
 
 }
