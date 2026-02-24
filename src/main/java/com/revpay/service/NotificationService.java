@@ -1,8 +1,10 @@
 package com.revpay.service;
 
 import com.revpay.dto.NotificationResponseDTO;
+import com.revpay.enums.NotificationType;
 import com.revpay.model.Notification;
 import com.revpay.model.User;
+import com.revpay.repository.NotificationPreferenceRepository;
 import com.revpay.repository.NotificationRepository;
 import com.revpay.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -23,6 +25,9 @@ public class NotificationService {
 
     @Autowired
     private NotificationRepository notificationRepository;
+
+    @Autowired
+    private NotificationPreferenceRepository notificationPreferenceRepository;
 
     @Autowired
     private UserRepository userRepository;
@@ -60,6 +65,33 @@ public class NotificationService {
         logger.info("Fetching notifications for user: {}", user.getEmail());
 
         notificationRepository.markAllAsReadByUser(user);
+    }
+
+    // ── Core method — called from any service when something notable happens ──
+    @Transactional
+    public void sendNotification(User user, NotificationType type, String message) {
+        try {
+            boolean isEnabled = notificationPreferenceRepository.isNotificationEnabled(user, type);
+
+            if (!isEnabled) {
+                logger.debug("Notification type {} is disabled for user: {}", type, user.getEmail());
+                return;
+            }
+
+            Notification notification = new Notification();
+            notification.setUser(user);
+            notification.setType(type);
+            notification.setMessage(message);
+            notification.setIsRead(false);
+
+            notificationRepository.save(notification);
+
+            logger.debug("Notification sent to {}: [{}] {}", user.getEmail(), type, message);
+
+        } catch (Exception e) {
+            // Never let a notification failure break the main transaction
+            logger.error("Failed to send notification to user {}: {}", user.getEmail(), e.getMessage());
+        }
     }
 
 }
