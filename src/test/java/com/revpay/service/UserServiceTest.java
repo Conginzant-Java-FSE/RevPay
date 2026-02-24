@@ -1,5 +1,4 @@
 package com.revpay.service;
-
 import com.revpay.dto.ForgotPasswordRequest;
 import com.revpay.dto.ForgotPasswordResponse;
 import com.revpay.exception.SecurityAnswerMismatchException;

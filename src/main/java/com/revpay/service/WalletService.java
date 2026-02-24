@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.WalletBalanceResponse;
 import com.revpay.dto.BankAccountResponse;
 import com.revpay.enums.NotificationType;
 import com.revpay.enums.RecordStatus;
@@ -111,6 +112,28 @@ public class WalletService {
         return accountNumber.substring(accountNumber.length() - 4);
     }
 
+    public WalletBalanceResponse getWalletBalance() {
+
+        Authentication authentication =
+                SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Wallet wallet = walletRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Wallet not found"));
+
+        return WalletBalanceResponse.builder()
+                .balance(wallet.getBalance())
+                .currency(wallet.getCurrency())
+                .lastUpdated(wallet.getUpdatedAt())   // comes from AuditConfig
+                .build();
+    }
+
     public BankAccountResponse getLinkedBankAccount() {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -147,4 +170,5 @@ public class WalletService {
         return "*".repeat(length - visibleDigits)
                 + accountNumber.substring(length - visibleDigits);
     }
+
 }
