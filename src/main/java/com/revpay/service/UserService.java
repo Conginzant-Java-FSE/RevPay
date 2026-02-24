@@ -81,8 +81,8 @@ public class UserService {
         user.setSecurityQuestion(request.getSecurityQuestion());
         user.setSecurityAnswer(passwordEncoder.encode(request.getSecurityAnswer()));
         user.setAccountType(request.getAccountType() != null ? request.getAccountType() : AccountType.PERSONAL);
-        user.setActive(true);
 
+        user.setActive(true);
         User savedUser = userRepository.save(user);
 
         createWalletForUser(savedUser);
