@@ -153,4 +153,25 @@ public class UserController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(
+            summary = "Get Full Profile",
+            description = "Returns the complete profile of the authenticated user including wallet balance and bank account. Used to populate the dashboard and profile page."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile fetched successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+    })
+    @GetMapping("/me")
+    public ResponseEntity<ApiDataResponse<ProfileMeResponse>> getFullProfile() {
+
+        ProfileMeResponse data = userService.getFullProfile();
+
+        ApiDataResponse<ProfileMeResponse> response =
+                new ApiDataResponse<>(true, "Profile fetched successfully", data);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

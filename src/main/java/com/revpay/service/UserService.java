@@ -19,6 +19,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -410,6 +411,83 @@ public class UserService {
         }
 
         return new SecurityQuestionResponse(user.getSecurityQuestion());
+    }
+
+    public ProfileMeResponse getFullProfile() {
+
+        User user = getLoggedInUser();
+
+        // ── Wallet balance ──────────────────────────────────────────────────────
+        BigDecimal walletBalance = walletRepository.findByUser(user)
+                .map(Wallet::getBalance)
+                .orElse(BigDecimal.ZERO);
+
+        // ── Primary bank account (masked) ───────────────────────────────────────
+        ProfileMeResponse.BankAccountSummary bankAccountSummary =
+                bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                        .map(bank -> ProfileMeResponse.BankAccountSummary.builder()
+                                .bankName(bank.getBankName())
+                                .accountNumber(maskAccountNumber(bank.getAccountNumber()))
+                                .accountType(bank.getAccountType() != null
+                                        ? bank.getAccountType().name() : null)
+                                .build())
+                        .orElse(null);
+
+        // ── Build base response ─────────────────────────────────────────────────
+        ProfileMeResponse.ProfileMeResponseBuilder builder = ProfileMeResponse.builder()
+                .userId(user.getId())
+                .accountType(user.getAccountType())
+                .fullName(user.getFullName())
+                .email(user.getEmail())
+                .phone(user.getPhone())
+                .walletBalance(walletBalance)
+                .bankAccount(bankAccountSummary)
+                .createdAt(user.getCreatedAt());
+
+        // ── Personal account ────────────────────────────────────────────────────
+        if (user.getAccountType() == AccountType.PERSONAL) {
+
+            Optional<PersonalProfile> personalOpt = personalProfileRepository.findByUser(user);
+
+            boolean profileComplete = personalOpt.isPresent();
+            builder.profileComplete(profileComplete);
+
+            personalOpt.ifPresent(profile -> {
+                builder.address(profile.getAddress());
+                builder.dob(profile.getDob() != null
+                        ? profile.getDob().toString() : null);
+            });
+        }
+
+        // ── Business account ────────────────────────────────────────────────────
+        if (user.getAccountType() == AccountType.BUSINESS) {
+
+            Optional<BusinessProfile> businessOpt = businessProfileRepository.findByUser(user);
+
+            boolean profileComplete = businessOpt.isPresent();
+            builder.profileComplete(profileComplete);
+
+            businessOpt.ifPresent(profile -> {
+                builder.businessName(profile.getBusinessName());
+                builder.businessType(profile.getBusinessType() != null
+                        ? profile.getBusinessType().name() : null);
+                builder.taxId(profile.getTaxId());
+                builder.contactPhone(profile.getContact_phone());
+                builder.website(profile.getWebsite());
+                builder.businessStatus(profile.getStatus() != null
+                        ? profile.getStatus().name() : null);
+            });
+        }
+
+        return builder.build();
+    }
+
+    // Mask account number — show only last 4 digits
+    private String maskAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.length() < 4) {
+            return accountNumber;
+        }
+        return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
 
 }
