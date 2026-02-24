@@ -1,14 +1,14 @@
 package com.revpay.dto;
 
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.math.BigDecimal;
 
 @Data
 public class AddFundsRequest {
-
-    @NotBlank(message = "Card ID is required")
-    private String cardId;
 
     @NotNull(message = "Amount is required")
     @DecimalMin(value = "1.00", message = "Minimum amount is 1.00")

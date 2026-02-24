@@ -6,10 +6,7 @@ import com.revpay.enums.RecordStatus;
 import com.revpay.enums.TransactionStatus;
 import com.revpay.enums.TransactionType;
 import com.revpay.model.*;
-import com.revpay.repository.PaymentMethodRepository;
-import com.revpay.repository.TransactionRepository;
-import com.revpay.repository.UserRepository;
-import com.revpay.repository.WalletRepository;
+import com.revpay.repository.*;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +40,9 @@ public class WalletService {
     private NotificationService notificationService;
 
     @Autowired
+    private BankAccountRepository bankAccountRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     @Transactional
@@ -57,35 +57,29 @@ public class WalletService {
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        //Verify transaction PIN
+        // ── Verify transaction PIN
         if (user.getMtPin() == null) {
-            throw new IllegalStateException("Transaction PIN not set. Please set your PIN before making transactions.");
+            throw new IllegalStateException("Transaction PIN not set. Please set your PIN first.");
         }
 
         if (!passwordEncoder.matches(request.getPin(), user.getMtPin())) {
             throw new IllegalArgumentException("Incorrect transaction PIN");
         }
 
-        //Verify card belongs to this user
-        PaymentMethod card = paymentMethodRepository
-                .findByCardIdAndUser(Long.parseLong(request.getCardId()), user)
-                .orElseThrow(() -> new IllegalArgumentException("Card not found or does not belong to this account"));
+        // ── Get user's primary bank account
+        BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No bank account linked. Please complete your profile first."));
 
-        if (card.getStatus() != RecordStatus.ACTIVE) {
-            throw new IllegalStateException("Card is inactive or expired");
-        }
-
-        //Credit the wallet
+        // ── Credit the wallet
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Wallet not found for this user"));
 
-        BigDecimal balanceBefore = wallet.getBalance();
-        BigDecimal balanceAfter  = balanceBefore.add(request.getAmount());
-
+        BigDecimal balanceAfter = wallet.getBalance().add(request.getAmount());
         wallet.setBalance(balanceAfter);
         walletRepository.save(wallet);
 
-        //Create AddMoney transaction record
+        // ── Create TOPUP transaction record
         Transaction transaction = new Transaction();
         transaction.setSender(null);
         transaction.setReceiver(user);
@@ -93,18 +87,26 @@ public class WalletService {
         transaction.setTransactionType(TransactionType.ADD_MONEY);
         transaction.setStatus(TransactionStatus.SUCCESS);
         transaction.setBalanceAfter(balanceAfter);
-        transaction.setNote("Wallet top-up from card ending " + card.getLastFour());
+        transaction.setNote("Added from " + bankAccount.getBankName()
+                + " account ending "
+                + getLast4(bankAccount.getAccountNumber()));
         transaction.setCreatedAt(LocalDateTime.now());
-
         transactionRepository.save(transaction);
 
-        //Send notification
+        // ── Send notification
         notificationService.sendNotification(
-                user, NotificationType.TRANSACTION_RECEIVED,
-                "₹" + request.getAmount() + " added to your wallet from card ending " + card.getLastFour()
+                user,
+                NotificationType.TRANSACTION_RECEIVED,
+                "₹" + request.getAmount() + " added to your wallet from "
+                        + bankAccount.getBankName()
+                        + " account ending " + getLast4(bankAccount.getAccountNumber())
         );
 
         logger.info("Wallet top-up of {} completed for user: {}", request.getAmount(), user.getEmail());
     }
 
+    private String getLast4(String accountNumber) {
+        if (accountNumber == null || accountNumber.length() < 4) return "****";
+        return accountNumber.substring(accountNumber.length() - 4);
+    }
 }
