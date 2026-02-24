@@ -2,6 +2,7 @@ package com.revpay.model;
 
 import com.revpay.config.AuditConfig;
 import com.revpay.enums.AccountType;
+import com.revpay.enums.UserStatus;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
 
@@ -44,6 +45,16 @@ public class User extends AuditConfig {
     private AccountType accountType;
 
     private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    @Column(name = "deactivated_at")
+    private LocalDateTime deactivatedAt;
+
+    @Column(name = "deactivation_reason", columnDefinition = "TEXT")
+    private String deactivationReason;
+
 
     public Long getId() {
         return id;
@@ -132,8 +143,23 @@ public class User extends AuditConfig {
     public void setMtPin(String mtPin) {
         this.mtPin = mtPin;
     }
+    public LocalDateTime getDeactivatedAt() {
+        return deactivatedAt;
+    }
 
-    public User(Long id, String mtPin, String username, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active) {
+    public void setDeactivatedAt(LocalDateTime deactivatedAt) {
+        this.deactivatedAt = deactivatedAt;
+    }
+
+    public String getDeactivationReason() {
+        return deactivationReason;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public User(Long id, String mtPin, String username, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active,UserStatus status ) {
         this.id = id;
         this.mtPin = mtPin;
         this.username = username;
@@ -145,8 +171,16 @@ public class User extends AuditConfig {
         this.securityAnswer = securityAnswer;
         this.accountType = accountType;
         this.active = active;
+        this.status = status;
     }
 
     public User() {}
 
+    public void setStatus(UserStatus status) {
+        this.status = status;
+    }
+
+    public void setDeactivationReason(String deactivationReason) {
+        this.deactivationReason = deactivationReason;
+    }
 }
