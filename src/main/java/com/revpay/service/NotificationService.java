@@ -93,5 +93,36 @@ public class NotificationService {
             logger.error("Failed to send notification to user {}: {}", user.getEmail(), e.getMessage());
         }
     }
+    @Transactional
+    public void markAsRead(Long notificationId) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new IllegalArgumentException("Notification not found with id: " + notificationId));
+
+
+        if (!notification.getUser().getId().equals(user.getId())) {
+            throw new IllegalArgumentException("Access denied: notification does not belong to this user");
+        }
+
+
+        if (Boolean.TRUE.equals(notification.getIsRead())) {
+            logger.debug("Notification {} is already marked as read", notificationId);
+            return;
+        }
+
+        notification.setIsRead(true);
+        notificationRepository.save(notification);
+
+        logger.info("Notification {} marked as read for user: {}", notificationId, user.getEmail());
+    }
 
 }
