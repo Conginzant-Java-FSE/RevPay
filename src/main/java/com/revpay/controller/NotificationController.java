@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -100,6 +101,34 @@ public class NotificationController {
         notificationService.readAllNotifications();
         ApiResponse<Void> response = new ApiResponse<>(true, "Notifications updated successfully");
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Get All Notifications",
+            description = "Fetch all notifications (read and unread) with pagination"
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping
+    public ResponseEntity<?> getAllNotifications(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        Page<NotificationResponseDTO> notificationPage =
+                notificationService.getAllNotifications(page, size);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "success", true,
+                        "data", notificationPage.getContent(),
+                        "pagination", Map.of(
+                                "page", notificationPage.getNumber(),
+                                "size", notificationPage.getSize(),
+                                "totalElements", notificationPage.getTotalElements(),
+                                "totalPages", notificationPage.getTotalPages()
+                        )
+                )
+        );
     }
 
 }
