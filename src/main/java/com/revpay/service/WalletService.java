@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.UpdateBankAccountRequest;
 import com.revpay.dto.WalletBalanceResponse;
 import com.revpay.dto.BankAccountResponse;
 import com.revpay.enums.NotificationType;
@@ -158,6 +159,7 @@ public class WalletService {
                 bankAccount.getAccountType()
         );
     }
+
     private String maskAccountNumber(String accountNumber) {
 
         if (accountNumber == null || accountNumber.length() < 4) {
@@ -169,6 +171,57 @@ public class WalletService {
 
         return "*".repeat(length - visibleDigits)
                 + accountNumber.substring(length - visibleDigits);
+    }
+
+    @Transactional
+    public void updateBankAccount(UpdateBankAccountRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // ── Verify password ─────────────────────────────────────────────────────
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Incorrect password");
+        }
+
+        // ── Find primary bank account ───────────────────────────────────────────
+        BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() -> new IllegalStateException("No primary bank account found"));
+
+        // ── Update fields ───────────────────────────────────────────────────────
+        if (request.getBankName() != null && !request.getBankName().isBlank()) {
+            bankAccount.setBankName(request.getBankName());
+        }
+
+        if (request.getAccountNumber() != null && !request.getAccountNumber().isBlank()) {
+            // Store only masked version — never store raw account number
+            bankAccount.setAccountNumber(maskAccountNumber(request.getAccountNumber()));
+        }
+
+        if (request.getIfscCode() != null && !request.getIfscCode().isBlank()) {
+            bankAccount.setIfscCode(request.getIfscCode());
+        }
+
+        if (request.getAccountType() != null) {
+            bankAccount.setAccountType(request.getAccountType());
+        }
+
+        bankAccountRepository.save(bankAccount);
+
+        // ── Notify user ─────────────────────────────────────────────────────────
+        notificationService.sendNotification(
+                user,
+                NotificationType.GENERAL,
+                "Your linked bank account has been updated successfully"
+        );
+
+        logger.info("Bank account updated for user: {}", user.getEmail());
     }
 
 }

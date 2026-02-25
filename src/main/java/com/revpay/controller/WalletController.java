@@ -1,10 +1,6 @@
 package com.revpay.controller;
 
-import com.revpay.dto.AddFundsRequest;
-import com.revpay.dto.ApiDataResponse;
-import com.revpay.dto.ApiResponse;
-import com.revpay.dto.WalletBalanceResponse;
-import com.revpay.dto.BankAccountResponse;
+import com.revpay.dto.*;
 import com.revpay.service.WalletService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -76,6 +72,28 @@ public class WalletController {
                         "Bank account fetched successfully",
                         data
                 );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(
+            summary = "Update Bank Account",
+            description = "Update the linked bank account for withdrawals. Requires password confirmation."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Bank account updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Incorrect password or validation error"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Bank account not found")
+    })
+    @PutMapping("/bank-account/update")
+    public ResponseEntity<ApiResponse<Void>> updateBankAccount(
+            @Valid @RequestBody UpdateBankAccountRequest request) {
+
+        walletService.updateBankAccount(request);
+
+        ApiResponse<Void> response = new ApiResponse<>(true, "Bank account updated successfully");
 
         return ResponseEntity.ok(response);
     }
