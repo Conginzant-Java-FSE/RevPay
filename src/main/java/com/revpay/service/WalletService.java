@@ -192,7 +192,6 @@ public class WalletService {
         }
 
         if (request.getAccountNumber() != null && !request.getAccountNumber().isBlank()) {
-            // Store only masked version — never store raw account number
             bankAccount.setAccountNumber(maskAccountNumber(request.getAccountNumber()));
         }
 
@@ -206,7 +205,6 @@ public class WalletService {
 
         bankAccountRepository.save(bankAccount);
 
-        // ── Notify user ─────────────────────────────────────────────────────────
         notificationService.sendNotification(
                 user,
                 NotificationType.GENERAL,
