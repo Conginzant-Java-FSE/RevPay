@@ -102,6 +102,37 @@ public class NotificationController {
         ApiResponse<Void> response = new ApiResponse<>(true, "Notifications updated successfully");
         return ResponseEntity.ok(response);
     }
+    @Operation(
+            summary = "Mark Notification as Read",
+            description = "Mark a single notification as read when the user clicks or views it. " +
+                    "Only the owner of the notification can perform this action."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "Notification marked as read"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Notification not found or does not belong to this user"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized - invalid or missing token"
+            )
+    })
+    @PutMapping("/{notificationId}/read")
+    public ResponseEntity<ApiResponse<Void>> markAsRead(
+            @PathVariable Long notificationId) {
+
+        notificationService.markAsRead(notificationId);
+
+        ApiResponse<Void> response =
+                new ApiResponse<>(true, "Notification marked as read");
+
+        return ResponseEntity.ok(response);
+    }
 
     @Operation(
             summary = "Get All Notifications",
