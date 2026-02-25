@@ -60,7 +60,6 @@ public class WalletService {
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ── Verify transaction PIN
         if (user.getMtPin() == null) {
             throw new IllegalStateException("Transaction PIN not set. Please set your PIN first.");
         }
@@ -69,12 +68,10 @@ public class WalletService {
             throw new IllegalArgumentException("Incorrect transaction PIN");
         }
 
-        // ── Get user's primary bank account
         BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
                 .orElseThrow(() -> new IllegalStateException(
                         "No bank account linked. Please complete your profile first."));
 
-        // ── Credit the wallet
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Wallet not found for this user"));
 
@@ -82,7 +79,6 @@ public class WalletService {
         wallet.setBalance(balanceAfter);
         walletRepository.save(wallet);
 
-        // ── Create TOPUP transaction record
         Transaction transaction = new Transaction();
         transaction.setSender(null);
         transaction.setReceiver(user);
@@ -96,7 +92,6 @@ public class WalletService {
         transaction.setCreatedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
-        // ── Send notification
         notificationService.sendNotification(
                 user,
                 NotificationType.TRANSACTION_RECEIVED,
@@ -185,16 +180,13 @@ public class WalletService {
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ── Verify password ─────────────────────────────────────────────────────
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Incorrect password");
         }
 
-        // ── Find primary bank account ───────────────────────────────────────────
         BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
                 .orElseThrow(() -> new IllegalStateException("No primary bank account found"));
 
-        // ── Update fields ───────────────────────────────────────────────────────
         if (request.getBankName() != null && !request.getBankName().isBlank()) {
             bankAccount.setBankName(request.getBankName());
         }
