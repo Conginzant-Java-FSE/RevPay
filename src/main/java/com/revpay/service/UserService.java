@@ -145,8 +145,7 @@ public class UserService {
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
-                user.getAccountType().toString()
-        );
+                user.getAccountType().toString());
 
         // Return login response
         return new LoginResponse(
@@ -198,7 +197,8 @@ public class UserService {
 
         Notification notification = new Notification();
         notification.setUser(user);
-        notification.setMessage("Your password was changed successfully. If this wasn't you, please contact support immediately.");
+        notification.setMessage(
+                "Your password was changed successfully. If this wasn't you, please contact support immediately.");
         notification.setType(NotificationType.SECURITY_ALERT);
         notification.setIsRead(false);
         notification.setCreatedAt(LocalDateTime.now());
@@ -423,15 +423,15 @@ public class UserService {
                 .orElse(BigDecimal.ZERO);
 
         // ── Primary bank account (masked) ───────────────────────────────────────
-        ProfileMeResponse.BankAccountSummary bankAccountSummary =
-                bankAccountRepository.findByUserAndIsPrimaryTrue(user)
-                        .map(bank -> ProfileMeResponse.BankAccountSummary.builder()
-                                .bankName(bank.getBankName())
-                                .accountNumber(maskAccountNumber(bank.getAccountNumber()))
-                                .accountType(bank.getAccountType() != null
-                                        ? bank.getAccountType().name() : null)
-                                .build())
-                        .orElse(null);
+        ProfileMeResponse.BankAccountSummary bankAccountSummary = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .map(bank -> ProfileMeResponse.BankAccountSummary.builder()
+                        .bankName(bank.getBankName())
+                        .accountNumber(maskAccountNumber(bank.getAccountNumber()))
+                        .accountType(bank.getAccountType() != null
+                                ? bank.getAccountType().name()
+                                : null)
+                        .build())
+                .orElse(null);
 
         // ── Build base response ─────────────────────────────────────────────────
         ProfileMeResponse.ProfileMeResponseBuilder builder = ProfileMeResponse.builder()
@@ -455,7 +455,8 @@ public class UserService {
             personalOpt.ifPresent(profile -> {
                 builder.address(profile.getAddress());
                 builder.dob(profile.getDob() != null
-                        ? profile.getDob().toString() : null);
+                        ? profile.getDob().toString()
+                        : null);
             });
         }
 
@@ -470,12 +471,14 @@ public class UserService {
             businessOpt.ifPresent(profile -> {
                 builder.businessName(profile.getBusinessName());
                 builder.businessType(profile.getBusinessType() != null
-                        ? profile.getBusinessType().name() : null);
+                        ? profile.getBusinessType().name()
+                        : null);
                 builder.taxId(profile.getTaxId());
                 builder.contactPhone(profile.getContact_phone());
                 builder.website(profile.getWebsite());
                 builder.businessStatus(profile.getStatus() != null
-                        ? profile.getStatus().name() : null);
+                        ? profile.getStatus().name()
+                        : null);
             });
         }
 
@@ -489,6 +492,7 @@ public class UserService {
         }
         return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
+
     @Transactional
     public void updateBusinessProfile(BusinessProfileUpdateRequest request) {
 
@@ -524,34 +528,57 @@ public class UserService {
 
         businessProfileRepository.save(profile);
     }
+
     @Transactional
     public void changePassword(ChangePasswordRequest request) {
 
         User user = getLoggedInUser();
 
-
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
             throw new IllegalArgumentException("Current password is incorrect.");
         }
-
 
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
             throw new IllegalArgumentException("New password must be different from the current password.");
         }
 
-
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("New password and confirm password do not match.");
         }
 
-
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
-
 
         createPasswordChangedNotification(user);
 
         logger.info("Password changed successfully for user: {}", user.getEmail());
+    }
+
+    @Transactional
+    public void changeTransactionPin(ChangePinRequest request) {
+        User user = getLoggedInUser();
+
+        // Check if first-time setup or update
+        if (user.getMtPin() != null) {
+            // Updating existing PIN
+            if (request.getCurrentPin() == null || request.getCurrentPin().isBlank()) {
+                throw new IllegalArgumentException("Current PIN is required to update transaction PIN");
+            }
+            if (!passwordEncoder.matches(request.getCurrentPin(), user.getMtPin())) {
+                throw new IllegalArgumentException("Current transaction PIN is incorrect");
+            }
+        }
+
+        // Validate new PIN and confirm PIN match
+        if (!request.getNewPin().equals(request.getConfirmPin())) {
+            throw new IllegalArgumentException("New PIN and confirm PIN do not match");
+        }
+
+        // Encode and save new PIN
+        user.setMtPin(passwordEncoder.encode(request.getNewPin()));
+        userRepository.save(user);
+
+        logger.info("Transaction PIN updated successfully for user: {}", user.getEmail());
     }
 
 }
