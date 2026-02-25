@@ -214,4 +214,34 @@ public class WalletService {
         logger.info("Bank account updated for user: {}", user.getEmail());
     }
 
+    @Transactional
+    public void setDefaultCard(Long cardId) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+
+        PaymentMethod card = paymentMethodRepository
+                .findByCardIdAndUser(cardId, user)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Card not found or does not belong to this account"));
+
+        if (card.getStatus() != RecordStatus.ACTIVE) {
+            throw new IllegalStateException("Cannot set an inactive or expired card as default");
+        }
+
+        paymentMethodRepository.unsetAllDefaultsByUser(user);
+
+        card.setIsDefault(true);
+        paymentMethodRepository.save(card);
+
+        logger.info("Default card set to cardId: {} for user: {}", cardId, user.getEmail());
+    }
+
 }
