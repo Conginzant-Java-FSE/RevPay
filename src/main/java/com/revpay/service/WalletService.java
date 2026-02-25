@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.WithdrawRequest;
 import com.revpay.dto.UpdateBankAccountRequest;
 import com.revpay.dto.WalletBalanceResponse;
 import com.revpay.dto.BankAccountResponse;
@@ -97,21 +98,76 @@ public class WalletService {
                 NotificationType.TRANSACTION_RECEIVED,
                 "₹" + request.getAmount() + " added to your wallet from "
                         + bankAccount.getBankName()
-                        + " account ending " + getLast4(bankAccount.getAccountNumber())
-        );
+                        + " account ending " + getLast4(bankAccount.getAccountNumber()));
 
         logger.info("Wallet top-up of {} completed for user: {}", request.getAmount(), user.getEmail());
     }
 
+    @Transactional
+    public void withdrawFunds(WithdrawRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getMtPin() == null) {
+            throw new IllegalStateException("Transaction PIN not set. Please set your PIN first.");
+        }
+
+        if (!passwordEncoder.matches(request.getPin(), user.getMtPin())) {
+            throw new IllegalArgumentException("Incorrect transaction PIN");
+        }
+
+        BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() -> new IllegalStateException(
+                        "No primary bank account linked for withdrawal."));
+
+        Wallet wallet = walletRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Wallet not found for this user"));
+
+        if (wallet.getBalance().compareTo(request.getAmount()) < 0) {
+            throw new IllegalArgumentException("Insufficient wallet balance");
+        }
+
+        BigDecimal balanceAfter = wallet.getBalance().subtract(request.getAmount());
+        wallet.setBalance(balanceAfter);
+        walletRepository.save(wallet);
+
+        Transaction transaction = new Transaction();
+        transaction.setSender(user);
+        transaction.setReceiver(null); // Withdrawal to bank account
+        transaction.setAmount(request.getAmount());
+        transaction.setTransactionType(TransactionType.WITHDRAW);
+        transaction.setStatus(TransactionStatus.SUCCESS);
+        transaction.setBalanceAfter(balanceAfter);
+        transaction.setNote(request.getNote() != null ? request.getNote() : "Withdrawal to bank account");
+        transaction.setCreatedAt(LocalDateTime.now());
+        transactionRepository.save(transaction);
+
+        notificationService.sendNotification(
+                user,
+                NotificationType.TRANSACTION_SENT,
+                "₹" + request.getAmount() + " withdrawn from your wallet to "
+                        + bankAccount.getBankName()
+                        + " account ending " + getLast4(bankAccount.getAccountNumber()));
+
+        logger.info("Wallet withdrawal of {} completed for user: {}", request.getAmount(), user.getEmail());
+    }
+
     private String getLast4(String accountNumber) {
-        if (accountNumber == null || accountNumber.length() < 4) return "****";
+        if (accountNumber == null || accountNumber.length() < 4)
+            return "****";
         return accountNumber.substring(accountNumber.length() - 4);
     }
 
     public WalletBalanceResponse getWalletBalance() {
 
-        Authentication authentication =
-                SecurityContextHolder.getContext().getAuthentication();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null || authentication.getName() == null) {
             throw new RuntimeException("User not authenticated");
@@ -126,7 +182,7 @@ public class WalletService {
         return WalletBalanceResponse.builder()
                 .balance(wallet.getBalance())
                 .currency(wallet.getCurrency())
-                .lastUpdated(wallet.getUpdatedAt())   // comes from AuditConfig
+                .lastUpdated(wallet.getUpdatedAt()) // comes from AuditConfig
                 .build();
     }
 
@@ -143,16 +199,14 @@ public class WalletService {
 
         BankAccount bankAccount = bankAccountRepository
                 .findByUserAndIsPrimaryTrue(user)
-                .orElseThrow(() ->
-                        new IllegalStateException("No primary bank account linked"));
+                .orElseThrow(() -> new IllegalStateException("No primary bank account linked"));
 
         String maskedAccount = maskAccountNumber(bankAccount.getAccountNumber());
 
         return new BankAccountResponse(
                 bankAccount.getBankName(),
                 maskedAccount,
-                bankAccount.getAccountType()
-        );
+                bankAccount.getAccountType());
     }
 
     private String maskAccountNumber(String accountNumber) {
@@ -208,8 +262,7 @@ public class WalletService {
         notificationService.sendNotification(
                 user,
                 NotificationType.GENERAL,
-                "Your linked bank account has been updated successfully"
-        );
+                "Your linked bank account has been updated successfully");
 
         logger.info("Bank account updated for user: {}", user.getEmail());
     }
@@ -225,7 +278,6 @@ public class WalletService {
 
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
-
 
         PaymentMethod card = paymentMethodRepository
                 .findByCardIdAndUser(cardId, user)
