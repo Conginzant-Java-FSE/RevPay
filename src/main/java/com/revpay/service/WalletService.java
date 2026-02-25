@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.AddFundsRequest;
+import com.revpay.dto.UpdateBankAccountRequest;
 import com.revpay.dto.WalletBalanceResponse;
 import com.revpay.dto.BankAccountResponse;
 import com.revpay.enums.NotificationType;
@@ -59,7 +60,6 @@ public class WalletService {
         User user = userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // ── Verify transaction PIN
         if (user.getMtPin() == null) {
             throw new IllegalStateException("Transaction PIN not set. Please set your PIN first.");
         }
@@ -68,12 +68,10 @@ public class WalletService {
             throw new IllegalArgumentException("Incorrect transaction PIN");
         }
 
-        // ── Get user's primary bank account
         BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
                 .orElseThrow(() -> new IllegalStateException(
                         "No bank account linked. Please complete your profile first."));
 
-        // ── Credit the wallet
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Wallet not found for this user"));
 
@@ -81,7 +79,6 @@ public class WalletService {
         wallet.setBalance(balanceAfter);
         walletRepository.save(wallet);
 
-        // ── Create TOPUP transaction record
         Transaction transaction = new Transaction();
         transaction.setSender(null);
         transaction.setReceiver(user);
@@ -95,7 +92,6 @@ public class WalletService {
         transaction.setCreatedAt(LocalDateTime.now());
         transactionRepository.save(transaction);
 
-        // ── Send notification
         notificationService.sendNotification(
                 user,
                 NotificationType.TRANSACTION_RECEIVED,
@@ -158,6 +154,7 @@ public class WalletService {
                 bankAccount.getAccountType()
         );
     }
+
     private String maskAccountNumber(String accountNumber) {
 
         if (accountNumber == null || accountNumber.length() < 4) {
@@ -169,6 +166,52 @@ public class WalletService {
 
         return "*".repeat(length - visibleDigits)
                 + accountNumber.substring(length - visibleDigits);
+    }
+
+    @Transactional
+    public void updateBankAccount(UpdateBankAccountRequest request) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+
+        User user = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Incorrect password");
+        }
+
+        BankAccount bankAccount = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
+                .orElseThrow(() -> new IllegalStateException("No primary bank account found"));
+
+        if (request.getBankName() != null && !request.getBankName().isBlank()) {
+            bankAccount.setBankName(request.getBankName());
+        }
+
+        if (request.getAccountNumber() != null && !request.getAccountNumber().isBlank()) {
+            bankAccount.setAccountNumber(maskAccountNumber(request.getAccountNumber()));
+        }
+
+        if (request.getIfscCode() != null && !request.getIfscCode().isBlank()) {
+            bankAccount.setIfscCode(request.getIfscCode());
+        }
+
+        if (request.getAccountType() != null) {
+            bankAccount.setAccountType(request.getAccountType());
+        }
+
+        bankAccountRepository.save(bankAccount);
+
+        notificationService.sendNotification(
+                user,
+                NotificationType.GENERAL,
+                "Your linked bank account has been updated successfully"
+        );
+
+        logger.info("Bank account updated for user: {}", user.getEmail());
     }
 
 }
