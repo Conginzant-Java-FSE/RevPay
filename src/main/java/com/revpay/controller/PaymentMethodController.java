@@ -49,7 +49,7 @@ public class PaymentMethodController {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Card not found or does not belong to this account"),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
     })
-    @PutMapping("/payment-methods/{cardId}/set-default")
+    @PutMapping("/{cardId}/set-default")
     public ResponseEntity<ApiResponse<Void>> setDefaultCard(@PathVariable Long cardId) {
 
         walletService.setDefaultCard(cardId);
