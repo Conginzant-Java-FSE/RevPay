@@ -27,21 +27,18 @@ public class MoneyRequestService {
     @Transactional
     public void cancelRequest(Long requestId, String email) {
 
-        // 1️⃣ Get logged-in user
         User requester = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
-        // 2️⃣ Find request ONLY if it belongs to this requester
         MoneyRequest request = moneyRequestRepository
                 .findByRequestIdAndRequester(requestId, requester)
                 .orElseThrow(() -> new RuntimeException("Request not found or not yours"));
 
-        // 3️⃣ Allow cancel only if PENDING
         if (request.getStatus() != RequestStatus.PENDING) {
             throw new RuntimeException("Only pending requests can be cancelled");
         }
 
-        // 4️⃣ Update status
+
         request.setStatus(RequestStatus.CANCELLED);
 
         moneyRequestRepository.save(request);
@@ -49,7 +46,6 @@ public class MoneyRequestService {
     @Transactional
     public MoneyRequest createRequest(MoneyRequestCreateRequest dto, String email) {
 
-        // 1️⃣ Get requester (logged in user)
         User requester = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -62,7 +58,6 @@ public class MoneyRequestService {
             throw new RuntimeException("Cannot request money from yourself");
         }
 
-        // 3️⃣ Create entity
         MoneyRequest request = new MoneyRequest();
         request.setRequester(requester);
         request.setRequestee(requestee);
@@ -70,7 +65,7 @@ public class MoneyRequestService {
         request.setPurpose(dto.getPurpose());
         request.setStatus(RequestStatus.PENDING);
 
-        // 4️⃣ Expiry = 7 days from now
+
         request.setExpiresAt(LocalDateTime.now().plusDays(7));
 
         return moneyRequestRepository.save(request);
