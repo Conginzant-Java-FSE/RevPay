@@ -43,6 +43,7 @@ public class ProfileService {
         }
 
         user.setStatus(UserStatus.DEACTIVATED);
+        user.setActive(false);
         user.setDeactivatedAt(LocalDateTime.now());
 
         if (request.getReason() != null && !request.getReason().isEmpty()) {
@@ -64,6 +65,7 @@ public class ProfileService {
 
         user.setStatus(UserStatus.ACTIVE);
         user.setDeactivatedAt(null);
+        user.setActive(true);
         user.setDeactivationReason(null);
 
         userRepository.save(user);
