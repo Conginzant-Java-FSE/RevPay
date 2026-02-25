@@ -5,8 +5,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -23,40 +23,31 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    private final BlacklistedTokenRepository blacklistedTokenRepository;
+    @Autowired
+    private BlacklistedTokenRepository blacklistedTokenRepository;
 
-    public JwtUtil(BlacklistedTokenRepository blacklistedTokenRepository) {
-        this.blacklistedTokenRepository = blacklistedTokenRepository;
-    }
-
-    // ===============================
-    // Generate Token
-    // ===============================
+    // Generate token
     public String generateToken(Long userId, String email, String accountType) {
-
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
+        claims.put("email", email);
         claims.put("accountType", accountType);
 
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(email)   // IMPORTANT: subject = email
+                .setSubject(email)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    // ===============================
-    // Signing Key
-    // ===============================
+    // Get signing key
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
     }
 
-    // ===============================
-    // Extract All Claims
-    // ===============================
+    // Extract all claims
     public Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSigningKey())
@@ -65,9 +56,7 @@ public class JwtUtil {
                 .getBody();
     }
 
-    // ===============================
-    // Extract Username (Email)
-    // ===============================
+    // Extract username (email)
     public String extractUsername(String token) {
         try {
             return extractAllClaims(token).getSubject();
@@ -76,66 +65,34 @@ public class JwtUtil {
         }
     }
 
-    // ===============================
-    // Extract Expiration
-    // ===============================
-    public Date extractExpiration(String token) {
-        return extractAllClaims(token).getExpiration();
-    }
-
-    // ===============================
-    // Extract UserId
-    // ===============================
+    // Extract user ID
     public Long extractUserId(String token) {
         return extractAllClaims(token).get("userId", Long.class);
     }
 
-    // ===============================
-    // Check Expired
-    // ===============================
+    // Check if token is expired
     public boolean isTokenExpired(String token) {
-        try {
-            return extractExpiration(token).before(new Date());
-        } catch (Exception e) {
-            return true;
-        }
+        return extractAllClaims(token).getExpiration().before(new Date());
     }
 
-    // ===============================
-    // Blacklist Check
-    // ===============================
     public boolean isTokenBlacklisted(String token) {
         return blacklistedTokenRepository.existsByToken(token);
     }
 
-    // ===============================
-    // FINAL VALIDATION METHOD (WITH DEBUG)
-    // ===============================
-    public boolean validateToken(String token, UserDetails userDetails) {
+    public Date extractExpiration(String token) {
+        return extractAllClaims(token).getExpiration();
+    }
 
+    // Validate token
+    public boolean validateToken(String token, String username) {
         try {
             String extractedUsername = extractUsername(token);
-
-            System.out.println("===== JWT DEBUG =====");
-            System.out.println("Token username: " + extractedUsername);
-            System.out.println("UserDetails username: " + userDetails.getUsername());
-            System.out.println("Expired: " + isTokenExpired(token));
-            System.out.println("Blacklisted: " + isTokenBlacklisted(token));
-            System.out.println("=====================");
-
-            return extractedUsername != null
-                    && extractedUsername.equals(userDetails.getUsername())
-                    && !isTokenExpired(token)
-                    && !isTokenBlacklisted(token);
-
+            return extractedUsername.equals(username) && !isTokenExpired(token) && !isTokenBlacklisted(token);
         } catch (Exception e) {
             return false;
         }
     }
 
-    // ===============================
-    // Generate Reset Token
-    // ===============================
     public String generateResetToken(Long userId) {
 
         long resetExpiration = 5 * 60 * 1000; // 5 minutes
@@ -148,4 +105,5 @@ public class JwtUtil {
                 .signWith(getSigningKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
+
 }
