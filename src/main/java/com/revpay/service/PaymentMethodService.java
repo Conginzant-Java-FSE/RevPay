@@ -3,6 +3,7 @@ package com.revpay.service;
 import com.revpay.dto.AddCardRequest;
 import com.revpay.dto.CardResponseDTO;
 import com.revpay.dto.PaymentMethodListDTO;
+import com.revpay.dto.UpdateCardRequest;
 import com.revpay.enums.CardType;
 import com.revpay.enums.RecordStatus;
 import com.revpay.model.PaymentMethod;
@@ -10,6 +11,8 @@ import com.revpay.model.User;
 import com.revpay.repository.PaymentMethodRepository;
 import com.revpay.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,7 +24,9 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-public class PaymentMethodService {
+public class PaymentMethodService extends BaseService {
+
+    private static final Logger logger = LoggerFactory.getLogger(PaymentMethodService.class);
 
     @Autowired
     private PaymentMethodRepository paymentMethodRepository;
@@ -119,8 +124,6 @@ public class PaymentMethodService {
         }
     }
 
-
-
     public List<PaymentMethodListDTO> getUserCards(Long userId) {
         List<PaymentMethod> cards =
                 paymentMethodRepository.findByUser_IdAndStatus(userId, RecordStatus.ACTIVE);
@@ -147,5 +150,42 @@ public class PaymentMethodService {
                     .build();
 
         }).toList();
+    }
+
+    @Transactional
+    public void updateCard(Long cardId, UpdateCardRequest request) {
+
+        User user = getLoggedInUser();
+
+        PaymentMethod card = paymentMethodRepository.findByCardIdAndUser(cardId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found or does not belong to this account"));
+
+        if (request.getNickname() != null && !request.getNickname().isBlank()) {
+            card.setNickname(request.getNickname());
+        }
+
+        if (request.getBillingStreet() != null && !request.getBillingStreet().isBlank()) {
+            card.setBillingStreet(request.getBillingStreet());
+        }
+
+        if (request.getBillingCity() != null && !request.getBillingCity().isBlank()) {
+            card.setBillingCity(request.getBillingCity());
+        }
+
+        if (request.getBillingState() != null && !request.getBillingState().isBlank()) {
+            card.setBillingState(request.getBillingState());
+        }
+
+        if (request.getBillingZip() != null && !request.getBillingZip().isBlank()) {
+            card.setBillingZip(request.getBillingZip());
+        }
+
+        if (request.getBillingCountry() != null && !request.getBillingCountry().isBlank()) {
+            card.setBillingCountry(request.getBillingCountry());
+        }
+
+        paymentMethodRepository.save(card);
+
+        logger.info("Card {} updated for user: {}", cardId, user.getEmail());
     }
 }
