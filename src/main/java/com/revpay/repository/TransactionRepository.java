@@ -46,7 +46,6 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             Pageable pageable
     );
 
-
     @Query("""
         SELECT t FROM Transaction t
         WHERE t.transactionId = :id
@@ -57,14 +56,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("user") User user
     );
 
-
     @Query("""
         SELECT t FROM Transaction t
         WHERE (t.sender = :user OR t.receiver = :user)
         ORDER BY t.createdAt DESC
         """)
     List<Transaction> findRecentByUser(@Param("user") User user, Pageable pageable);
-
 
     @Query("""
         SELECT COALESCE(SUM(t.amount), 0)
@@ -120,4 +117,5 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("user")   User user,
             @Param("status") TransactionStatus status
     );
+
 }
