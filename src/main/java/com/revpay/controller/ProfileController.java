@@ -4,6 +4,8 @@ package com.revpay.controller;
 import com.revpay.dto.*;
 import com.revpay.service.*;
 import com.revpay.util.JwtUtil;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -72,5 +74,26 @@ public class ProfileController {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(false, e.getMessage()));
         }
+    }
+
+    @Operation(
+            summary = "Update Security Question",
+            description = "Change security question and answer. Current password required for verification."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Security question updated successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Incorrect current password"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    @PutMapping("/security-question/update")
+    public ResponseEntity<ApiResponse<Void>> updateSecurityQuestion(
+            @Valid @RequestBody UpdateSecurityQuestionRequest request) {
+
+        userService.updateSecurityQuestion(request);
+
+        ApiResponse<Void> response = new ApiResponse<>(true, "Security question updated successfully");
+
+        return ResponseEntity.ok(response);
     }
 }
