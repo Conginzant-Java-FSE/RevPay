@@ -1,6 +1,7 @@
 package com.revpay.service;
 
 import com.revpay.dto.DeleteAccountRequest;
+import com.revpay.dto.LoginRequest;
 import com.revpay.enums.UserStatus;
 import com.revpay.model.User;
 import com.revpay.repository.UserRepository;
@@ -54,16 +55,39 @@ public class ProfileService {
     }
 
     // Optional: Method to reactivate account
+//    @Transactional
+//    public void reactivateAccount(Long userId) {
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new RuntimeException("User not found"));
+//
+//        if (user.getStatus() != UserStatus.DEACTIVATED) {
+//            throw new RuntimeException("Account is not deactivated");
+//        }
+//
+//        user.setStatus(UserStatus.ACTIVE);
+//        user.setDeactivatedAt(null);
+//        user.setActive(true);
+//        user.setDeactivationReason(null);
+//
+//        userRepository.save(user);
+//    }
     @Transactional
-    public void reactivateAccount(Long userId) {
-        User user = userRepository.findById(userId)
+    public void reactivateAccount(LoginRequest request) {
+
+        User user = userRepository
+                .findByEmailOrPhone(request.getEmailOrPhone(), request.getEmailOrPhone())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getStatus() != UserStatus.DEACTIVATED) {
             throw new RuntimeException("Account is not deactivated");
         }
 
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+            throw new RuntimeException("Invalid password");
+        }
+
         user.setStatus(UserStatus.ACTIVE);
+        user.setActive(true); // remove if you delete active field
         user.setDeactivatedAt(null);
         user.setActive(true);
         user.setDeactivationReason(null);

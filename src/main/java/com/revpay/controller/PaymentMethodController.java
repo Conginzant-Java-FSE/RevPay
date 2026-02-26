@@ -1,17 +1,19 @@
 package com.revpay.controller;
 
-import com.revpay.dto.AddCardRequest;
-import com.revpay.dto.ApiDataResponse;
-import com.revpay.dto.ApiResponse;
-import com.revpay.dto.CardResponseDTO;
+import com.revpay.dto.*;
 import com.revpay.service.PaymentMethodService;
 import com.revpay.service.WalletService;
+import com.revpay.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/payment-methods")
@@ -57,5 +59,49 @@ public class PaymentMethodController {
         ApiResponse<Void> response = new ApiResponse<>(true, "Default card updated");
 
         return ResponseEntity.ok(response);
+    }
+
+    @Autowired
+    private JwtUtil jwtUtil;
+
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping
+    public ResponseEntity<?> getUserPaymentMethods(
+            @RequestHeader("Authorization") String token) {
+
+        try {
+
+
+            if (token == null || !token.startsWith("Bearer ")) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Missing or invalid Authorization header"));
+            }
+
+            String jwt = token.substring(7);
+
+
+            if (jwtUtil.isTokenExpired(jwt)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "Token has expired"));
+            }
+
+
+            Long userId = jwtUtil.extractUserId(jwt);
+
+
+            List<PaymentMethodListDTO> cards = paymentMethodService.getUserCards(userId);
+
+            return ResponseEntity.ok(
+                    new ApiDataResponse<>(
+                            true,
+                            "Payment methods fetched successfully",
+                            cards
+                    )
+            );
+
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("error", "Invalid token or session: " + e.getMessage()));
+        }
     }
 }

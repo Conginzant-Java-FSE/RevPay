@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password/reset",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
-                                "/swagger-ui.html"
+                                "/swagger-ui.html",
+                                "/api/profile/reactivate-account"
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
