@@ -417,12 +417,10 @@ public class UserService {
 
         User user = getLoggedInUser();
 
-        // ── Wallet balance ──────────────────────────────────────────────────────
         BigDecimal walletBalance = walletRepository.findByUser(user)
                 .map(Wallet::getBalance)
                 .orElse(BigDecimal.ZERO);
 
-        // ── Primary bank account (masked) ───────────────────────────────────────
         ProfileMeResponse.BankAccountSummary bankAccountSummary = bankAccountRepository.findByUserAndIsPrimaryTrue(user)
                 .map(bank -> ProfileMeResponse.BankAccountSummary.builder()
                         .bankName(bank.getBankName())
@@ -433,7 +431,6 @@ public class UserService {
                         .build())
                 .orElse(null);
 
-        // ── Build base response ─────────────────────────────────────────────────
         ProfileMeResponse.ProfileMeResponseBuilder builder = ProfileMeResponse.builder()
                 .userId(user.getId())
                 .accountType(user.getAccountType())
@@ -444,7 +441,6 @@ public class UserService {
                 .bankAccount(bankAccountSummary)
                 .createdAt(user.getCreatedAt());
 
-        // ── Personal account ────────────────────────────────────────────────────
         if (user.getAccountType() == AccountType.PERSONAL) {
 
             Optional<PersonalProfile> personalOpt = personalProfileRepository.findByUser(user);
@@ -460,7 +456,6 @@ public class UserService {
             });
         }
 
-        // ── Business account ────────────────────────────────────────────────────
         if (user.getAccountType() == AccountType.BUSINESS) {
 
             Optional<BusinessProfile> businessOpt = businessProfileRepository.findByUser(user);
@@ -498,7 +493,6 @@ public class UserService {
 
         User user = getLoggedInUser();
 
-        // Ensure user is BUSINESS account
         if (user.getAccountType() != AccountType.BUSINESS) {
             throw new IllegalStateException("Only business users can update business profile");
         }
@@ -558,9 +552,7 @@ public class UserService {
     public void changeTransactionPin(ChangePinRequest request) {
         User user = getLoggedInUser();
 
-        // Check if first-time setup or update
         if (user.getMtPin() != null) {
-            // Updating existing PIN
             if (request.getCurrentPin() == null || request.getCurrentPin().isBlank()) {
                 throw new IllegalArgumentException("Current PIN is required to update transaction PIN");
             }
@@ -569,16 +561,33 @@ public class UserService {
             }
         }
 
-        // Validate new PIN and confirm PIN match
         if (!request.getNewPin().equals(request.getConfirmPin())) {
             throw new IllegalArgumentException("New PIN and confirm PIN do not match");
         }
 
-        // Encode and save new PIN
         user.setMtPin(passwordEncoder.encode(request.getNewPin()));
         userRepository.save(user);
 
         logger.info("Transaction PIN updated successfully for user: {}", user.getEmail());
+    }
+
+    @Transactional
+    public void updateSecurityQuestion(UpdateSecurityQuestionRequest request) {
+
+        User user = getLoggedInUser();
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        user.setSecurityQuestion(request.getSecurityQuestion());
+
+        String normalizedAnswer = request.getSecurityAnswer().toLowerCase().trim();
+        user.setSecurityAnswer(passwordEncoder.encode(normalizedAnswer));
+
+        userRepository.save(user);
+
+        logger.info("Security question updated for user: {}", user.getEmail());
     }
 
 }
