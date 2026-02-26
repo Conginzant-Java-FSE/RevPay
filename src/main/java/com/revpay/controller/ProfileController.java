@@ -34,7 +34,6 @@ public class ProfileController {
 
             String token = authHeader.substring(7);
 
-
             profileService.deleteAccount(token, request);
 
             return ResponseEntity.ok(

@@ -71,7 +71,7 @@ public class PaymentMethodController {
 
         try {
 
-            // 1️⃣ Validate Header
+
             if (token == null || !token.startsWith("Bearer ")) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Missing or invalid Authorization header"));
@@ -79,16 +79,16 @@ public class PaymentMethodController {
 
             String jwt = token.substring(7);
 
-            // 2️⃣ Check Expiry
+
             if (jwtUtil.isTokenExpired(jwt)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("error", "Token has expired"));
             }
 
-            // 3️⃣ Extract User ID
+
             Long userId = jwtUtil.extractUserId(jwt);
 
-            // 4️⃣ Fetch Cards
+
             List<PaymentMethodListDTO> cards = paymentMethodService.getUserCards(userId);
 
             return ResponseEntity.ok(

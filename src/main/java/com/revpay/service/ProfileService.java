@@ -89,6 +89,7 @@ public class ProfileService {
         user.setStatus(UserStatus.ACTIVE);
         user.setActive(true); // remove if you delete active field
         user.setDeactivatedAt(null);
+        user.setActive(true);
         user.setDeactivationReason(null);
 
         userRepository.save(user);
