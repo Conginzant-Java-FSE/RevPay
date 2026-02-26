@@ -1,5 +1,6 @@
 package com.revpay.repository;
 
+import com.revpay.enums.RecordStatus;
 import com.revpay.model.PaymentMethod;
 import com.revpay.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -28,4 +29,6 @@ public interface PaymentMethodRepository extends JpaRepository<PaymentMethod, Lo
     void unsetAllDefaultsByUser(@Param("user") User user);
 
     int countByUser(User user);
-}
+
+    List<PaymentMethod> findByUser_IdAndStatus(Long userId, RecordStatus status);
+  }

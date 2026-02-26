@@ -2,6 +2,7 @@ package com.revpay.service;
 
 import com.revpay.dto.AddCardRequest;
 import com.revpay.dto.CardResponseDTO;
+import com.revpay.dto.PaymentMethodListDTO;
 import com.revpay.enums.CardType;
 import com.revpay.enums.RecordStatus;
 import com.revpay.model.PaymentMethod;
@@ -15,6 +16,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.Year;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -114,5 +117,35 @@ public class PaymentMethodService {
         } else {
             return CardType.UNKNOWN;
         }
+    }
+
+
+
+    public List<PaymentMethodListDTO> getUserCards(Long userId) {
+        List<PaymentMethod> cards =
+                paymentMethodRepository.findByUser_IdAndStatus(userId, RecordStatus.ACTIVE);
+
+        return cards.stream().map(card -> {
+
+            String billingAddress = String.join(", ",
+                    Optional.ofNullable(card.getBillingStreet()).orElse(""),
+                    Optional.ofNullable(card.getBillingCity()).orElse(""),
+                    Optional.ofNullable(card.getBillingState()).orElse(""),
+                    Optional.ofNullable(card.getBillingZip()).orElse(""),
+                    Optional.ofNullable(card.getBillingCountry()).orElse("")
+            );
+
+            return PaymentMethodListDTO.builder()
+                    .cardId(card.getCardId())
+                    .nickname(card.getNickname())
+                    .cardType(card.getCardType())
+                    .lastFour(card.getLastFour())
+                    .expiryMonth(card.getExpiryMonth())
+                    .expiryYear(card.getExpiryYear())
+                    .isDefault(card.getIsDefault())
+                    .billingAddress(billingAddress.trim())
+                    .build();
+
+        }).toList();
     }
 }
