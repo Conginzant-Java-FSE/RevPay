@@ -13,6 +13,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -58,4 +59,20 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     BigDecimal sumSentByUserAndDateRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
     Optional<Transaction> findByTransactionId(Long transactionId);
+
+    // Completed transactions received by user in date range
+    @Query("SELECT t FROM Transaction t WHERE t.receiver = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
+    List<Transaction> findCompletedReceivedInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Completed transactions sent by user in date range
+    @Query("SELECT t FROM Transaction t WHERE t.sender = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
+    List<Transaction> findCompletedSentInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Pending incoming — transactions where this user is receiver but status is PENDING
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.receiver = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
+    BigDecimal sumPendingReceivedByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Pending outgoing — transactions where this user is sender but status is PENDING
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.sender = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
+    BigDecimal sumPendingSentByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 }
