@@ -8,7 +8,6 @@ import com.revpay.enums.AccountType;
 import com.revpay.model.Transaction;
 import com.revpay.model.User;
 import com.revpay.repository.TransactionRepository;
-import com.revpay.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,8 +28,7 @@ public class AnalyticsService extends BaseService {
 
     private final TransactionRepository transactionRepository;
 
-    public AnalyticsService(UserRepository userRepository, TransactionRepository transactionRepository) {
-        super(userRepository);
+    public AnalyticsService(TransactionRepository transactionRepository) {
         this.transactionRepository = transactionRepository;
     }
 
