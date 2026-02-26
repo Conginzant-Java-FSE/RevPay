@@ -19,6 +19,22 @@ import java.util.Optional;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
+    // Pending incoming — transactions where this user is receiver but status is PENDING
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.receiver = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
+    BigDecimal sumPendingReceivedByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Pending outgoing — transactions where this user is sender but status is PENDING
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.sender = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
+    BigDecimal sumPendingSentByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Completed transactions received by user in date range
+    @Query("SELECT t FROM Transaction t WHERE t.receiver = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
+    List<Transaction> findCompletedReceivedInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
+    // Completed transactions sent by user in date range
+    @Query("SELECT t FROM Transaction t WHERE t.sender = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
+    List<Transaction> findCompletedSentInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+
     @Query("""
         SELECT t FROM Transaction t
         WHERE (t.sender = :user OR t.receiver = :user)
