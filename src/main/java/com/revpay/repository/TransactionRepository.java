@@ -19,60 +19,105 @@ import java.util.Optional;
 @Repository
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
 
-    // All transactions for a user (sent or received) — for transaction history
-    @Query("SELECT t FROM Transaction t WHERE t.sender = :user OR t.receiver = :user ORDER BY t.createdAt DESC")
-    Page<Transaction> findAllByUser(@Param("user") User user, Pageable pageable);
-
-    // Filter by type
-    @Query("SELECT t FROM Transaction t WHERE (t.sender = :user OR t.receiver = :user) AND t.transactionType = :type ORDER BY t.createdAt DESC")
-    Page<Transaction> findAllByUserAndType(@Param("user") User user, @Param("type") TransactionType type, Pageable pageable);
-
-    // Filter by status
-    @Query("SELECT t FROM Transaction t WHERE (t.sender = :user OR t.receiver = :user) AND t.status = :status ORDER BY t.createdAt DESC")
-    Page<Transaction> findAllByUserAndStatus(@Param("user") User user, @Param("status") TransactionStatus status, Pageable pageable);
-
-    // Filter by date range
-    @Query("SELECT t FROM Transaction t WHERE (t.sender = :user OR t.receiver = :user) AND t.createdAt BETWEEN :from AND :to ORDER BY t.createdAt DESC")
-    Page<Transaction> findAllByUserAndDateRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to, Pageable pageable);
-
-    // Search by counterparty name, email or transaction ID
     @Query("""
         SELECT t FROM Transaction t
         WHERE (t.sender = :user OR t.receiver = :user)
+        AND (:type IS NULL OR t.transactionType = :type)
+        AND (:status IS NULL OR t.status = :status)
+        AND (:from IS NULL OR t.createdAt >= :from)
+        AND (:to IS NULL OR t.createdAt <= :to)
         AND (
-            LOWER(t.sender.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR
+            :search IS NULL OR
+            LOWER(CAST(t.transactionId AS string)) LIKE LOWER(CONCAT('%', :search, '%')) OR
+            LOWER(t.sender.fullName)  LIKE LOWER(CONCAT('%', :search, '%')) OR
+            LOWER(t.sender.email)     LIKE LOWER(CONCAT('%', :search, '%')) OR
             LOWER(t.receiver.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(t.sender.email) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            LOWER(t.receiver.email) LIKE LOWER(CONCAT('%', :search, '%')) OR
-            CAST(t.transactionId AS string) LIKE CONCAT('%', :search, '%')
+            LOWER(t.receiver.email)    LIKE LOWER(CONCAT('%', :search, '%'))
         )
         ORDER BY t.createdAt DESC
         """)
-    Page<Transaction> findAllByUserAndSearch(@Param("user") User user, @Param("search") String search, Pageable pageable);
+    Page<Transaction> findAllByUserWithFilters(
+            @Param("user")   User user,
+            @Param("type")   TransactionType type,
+            @Param("status") TransactionStatus status,
+            @Param("from")   LocalDateTime from,
+            @Param("to")     LocalDateTime to,
+            @Param("search") String search,
+            Pageable pageable
+    );
 
-    // For analytics — total received in date range
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.receiver = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
-    BigDecimal sumReceivedByUserAndDateRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    // For analytics — total sent in date range
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.sender = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
-    BigDecimal sumSentByUserAndDateRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    @Query("""
+        SELECT t FROM Transaction t
+        WHERE t.transactionId = :id
+        AND (t.sender = :user OR t.receiver = :user)
+        """)
+    Optional<Transaction> findByIdAndUser(
+            @Param("id")   Long id,
+            @Param("user") User user
+    );
 
-    Optional<Transaction> findByTransactionId(Long transactionId);
 
-    // Completed transactions received by user in date range
-    @Query("SELECT t FROM Transaction t WHERE t.receiver = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
-    List<Transaction> findCompletedReceivedInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    @Query("""
+        SELECT t FROM Transaction t
+        WHERE (t.sender = :user OR t.receiver = :user)
+        ORDER BY t.createdAt DESC
+        """)
+    List<Transaction> findRecentByUser(@Param("user") User user, Pageable pageable);
 
-    // Completed transactions sent by user in date range
-    @Query("SELECT t FROM Transaction t WHERE t.sender = :user AND t.status = 'COMPLETED' AND t.createdAt BETWEEN :from AND :to")
-    List<Transaction> findCompletedSentInRange(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
 
-    // Pending incoming — transactions where this user is receiver but status is PENDING
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.receiver = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
-    BigDecimal sumPendingReceivedByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.receiver = :user
+        AND t.transactionType = 'SEND'
+        AND t.status = 'SUCCESS'
+        AND t.createdAt BETWEEN :from AND :to
+        """)
+    BigDecimal sumReceivedByUserAndDateRange(
+            @Param("user") User user,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to
+    );
 
-    // Pending outgoing — transactions where this user is sender but status is PENDING
-    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t WHERE t.sender = :user AND t.status = 'PENDING' AND t.createdAt BETWEEN :from AND :to")
-    BigDecimal sumPendingSentByUser(@Param("user") User user, @Param("from") LocalDateTime from, @Param("to") LocalDateTime to);
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.sender = :user
+        AND t.transactionType = 'SEND'
+        AND t.status = 'SUCCESS'
+        AND t.createdAt BETWEEN :from AND :to
+        """)
+    BigDecimal sumSentByUserAndDateRange(
+            @Param("user") User user,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to
+    );
+
+    @Query("""
+        SELECT COALESCE(SUM(t.amount), 0)
+        FROM Transaction t
+        WHERE t.receiver = :user
+        AND t.transactionType = 'ADD_MONEY'
+        AND t.status = 'SUCCESS'
+        AND t.createdAt BETWEEN :from AND :to
+        """)
+    BigDecimal sumTopUpsByUserAndDateRange(
+            @Param("user") User user,
+            @Param("from") LocalDateTime from,
+            @Param("to")   LocalDateTime to
+    );
+
+    @Query("SELECT COUNT(t) FROM Transaction t WHERE (t.sender = :user OR t.receiver = :user)")
+    long countAllByUser(@Param("user") User user);
+
+    @Query("""
+        SELECT COUNT(t) FROM Transaction t
+        WHERE (t.sender = :user OR t.receiver = :user)
+        AND t.status = :status
+        """)
+    long countByUserAndStatus(
+            @Param("user")   User user,
+            @Param("status") TransactionStatus status
+    );
 }

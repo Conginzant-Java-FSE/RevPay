@@ -46,13 +46,10 @@ public class Transaction extends AuditConfig {
     private TransactionStatus status;
 
     private String note;
-
-    // Optional link to a money request that triggered this transaction
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "money_request_id")
     private MoneyRequest moneyRequest;
 
-    // Optional link to an invoice payment
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
