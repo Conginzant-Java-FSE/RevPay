@@ -6,6 +6,7 @@ import com.revpay.service.MoneyRequestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -94,7 +95,7 @@ public class MoneyRequestController {
             description = "List all pending money requests directed at the logged-in user."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/requests/incoming")
+    @GetMapping("/incoming")
     public ResponseEntity<ApiDataResponse<Page<IncomingRequestResponse>>> getIncomingRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -111,7 +112,7 @@ public class MoneyRequestController {
             description = "List all money requests sent by the logged-in user — all statuses."
     )
     @SecurityRequirement(name = "bearerAuth")
-    @GetMapping("/requests/outgoing")
+    @GetMapping("/outgoing")
     public ResponseEntity<ApiDataResponse<Page<OutgoingRequestResponse>>> getOutgoingRequests(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
@@ -120,5 +121,28 @@ public class MoneyRequestController {
         Page<OutgoingRequestResponse> data = moneyRequestService.getOutgoingRequests(pageable);
 
         return ResponseEntity.ok(new ApiDataResponse<>(true, "Outgoing requests fetched successfully", data));
+    }
+
+    // Accept money request
+    @Operation(
+            summary = "Accept Money Request",
+            description = "Accept an incoming money request. Debits the logged-in user and credits the requester atomically."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Request accepted and payment processed"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Insufficient balance, incorrect PIN, or request not pending"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Request not found or does not belong to this user"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @PutMapping("/{requestId}/accept")
+    public ResponseEntity<ApiDataResponse<AcceptMoneyRequestResponse>> acceptRequest(
+            @PathVariable Long requestId,
+            @Valid @RequestBody AcceptMoneyRequestRequest request) {
+
+        AcceptMoneyRequestResponse data = moneyRequestService.acceptRequest(requestId, request);
+
+        return ResponseEntity.ok(
+                new ApiDataResponse<>(true, "Request accepted and payment processed", data));
     }
 }

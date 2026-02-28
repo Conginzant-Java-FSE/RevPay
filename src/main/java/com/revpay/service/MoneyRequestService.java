@@ -1,16 +1,12 @@
 package com.revpay.service;
 
-import com.revpay.dto.IncomingRequestResponse;
-import com.revpay.dto.MoneyRequestCreateRequest;
-import com.revpay.dto.OutgoingRequestResponse;
-import com.revpay.enums.NotificationType;
-import com.revpay.enums.RecordStatus;
-import com.revpay.enums.RequestStatus;
-import com.revpay.model.MoneyRequest;
-import com.revpay.model.Notification;
-import com.revpay.model.User;
+import com.revpay.dto.*;
+import com.revpay.enums.*;
+import com.revpay.model.*;
 import com.revpay.repository.MoneyRequestRepository;
+import com.revpay.repository.TransactionRepository;
 import com.revpay.repository.UserRepository;
+import com.revpay.repository.WalletRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,8 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Service
@@ -35,6 +33,15 @@ public class MoneyRequestService extends BaseService {
 
     @Autowired
     private NotificationService notificationService;
+
+    @Autowired
+    private BCryptPasswordEncoder passwordEncoder;
+
+    @Autowired
+    private WalletRepository walletRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
 
     @Transactional
     public void cancelRequest(Long requestId, String email) {
@@ -135,5 +142,94 @@ public class MoneyRequestService extends BaseService {
                 .email(req.getRequestee().getEmail()).build())
                 .amount(req.getAmount()).purpose(req.getPurpose()).status(req.getStatus())
                 .createdAt(req.getCreatedAt()).build());
+    }
+
+    // Accept money request — transfer funds, create transaction record, send notifications
+    @Transactional
+    public AcceptMoneyRequestResponse acceptRequest(
+            Long requestId, AcceptMoneyRequestRequest request) {
+
+        User acceptor = getLoggedInUser();
+
+        if (acceptor.getMtPin() == null) {
+            throw new IllegalStateException("Transaction PIN not set. Please set your PIN before making transactions.");
+        }
+
+        if (!passwordEncoder.matches(request.getPin(), acceptor.getMtPin())) {
+            throw new IllegalArgumentException("Incorrect transaction PIN");
+        }
+
+        MoneyRequest moneyRequest = moneyRequestRepository
+                .findByRequestIdAndRequestee(requestId, acceptor)
+                .orElseThrow(() -> new IllegalArgumentException("Money request not found or does not belong to this user"));
+
+        if (moneyRequest.getStatus() != RequestStatus.PENDING) {
+            throw new IllegalStateException(
+                    "Only pending requests can be accepted. Current status: " + moneyRequest.getStatus());
+        }
+
+        if (moneyRequest.getExpiresAt() != null && moneyRequest.getExpiresAt().isBefore(LocalDateTime.now())) {
+            moneyRequest.setStatus(RequestStatus.EXPIRED);
+            moneyRequestRepository.save(moneyRequest);
+            throw new IllegalStateException("This money request has expired and can no longer be accepted");
+        }
+
+        User requester = moneyRequest.getRequester();
+        BigDecimal amount = moneyRequest.getAmount();
+
+        Wallet acceptorWallet = walletRepository.findByUser(acceptor)
+                .orElseThrow(() -> new IllegalStateException("Your wallet was not found"));
+
+        if (acceptorWallet.getBalance().compareTo(amount) < 0) {
+            throw new IllegalStateException(
+                    "Insufficient wallet balance. Available: ₹" + acceptorWallet.getBalance() + ", Required: ₹" + amount);
+        }
+
+        Wallet requesterWallet = walletRepository.findByUser(requester)
+                .orElseThrow(() -> new IllegalStateException("Requester wallet not found"));
+
+        BigDecimal acceptorNewBalance   = acceptorWallet.getBalance().subtract(amount);
+        BigDecimal requesterNewBalance  = requesterWallet.getBalance().add(amount);
+
+        acceptorWallet.setBalance(acceptorNewBalance);
+        requesterWallet.setBalance(requesterNewBalance);
+
+        walletRepository.save(acceptorWallet);
+        walletRepository.save(requesterWallet);
+
+        moneyRequest.setStatus(RequestStatus.ACCEPTED);
+        moneyRequestRepository.save(moneyRequest);
+
+        LocalDateTime now = LocalDateTime.now();
+
+        Transaction transaction = new Transaction();
+        transaction.setSender(acceptor);
+        transaction.setReceiver(requester);
+        transaction.setAmount(amount);
+        transaction.setTransactionType(TransactionType.SEND);
+        transaction.setStatus(TransactionStatus.SUCCESS);
+        transaction.setNote("Payment for money request: " + moneyRequest.getPurpose());
+        transaction.setBalanceAfter(acceptorNewBalance);
+        transaction.setCreatedAt(now);
+        transactionRepository.save(transaction);
+
+        notificationService.sendNotification(
+                acceptor,
+                NotificationType.TRANSACTION_SENT,
+                "You paid ₹" + amount + " to " + requester.getFullName() + " for: " + moneyRequest.getPurpose()
+        );
+
+        notificationService.sendNotification(
+                requester,
+                NotificationType.TRANSACTION_RECEIVED,
+                acceptor.getFullName() + " accepted your money request of ₹" + amount + " for: " + moneyRequest.getPurpose()
+        );
+
+        logger.info("Money request {} accepted — ₹{} transferred from {} to {}",
+                requestId, amount, acceptor.getEmail(), requester.getEmail());
+
+        return AcceptMoneyRequestResponse.builder()
+                .transactionId(transaction.getTransactionId())
+                .amount(amount).newBalance(acceptorNewBalance).build();
     }
 }
