@@ -1,6 +1,8 @@
 package com.revpay.service;
 
+import com.revpay.dto.IncomingRequestResponse;
 import com.revpay.dto.MoneyRequestCreateRequest;
+import com.revpay.dto.OutgoingRequestResponse;
 import com.revpay.enums.NotificationType;
 import com.revpay.enums.RecordStatus;
 import com.revpay.enums.RequestStatus;
@@ -13,6 +15,8 @@ import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -97,5 +101,39 @@ public class MoneyRequestService extends BaseService {
         );
 
         logger.info("Money request {} declined by user: {}", requestId, user.getEmail());
+    }
+
+    // Incoming requests — only PENDING
+    public Page<IncomingRequestResponse> getIncomingRequests(Pageable pageable) {
+
+        User user = getLoggedInUser();
+
+        Page<MoneyRequest> requests = moneyRequestRepository
+                .findByRequesteeAndStatusOrderByCreatedAtDesc(
+                        user, RequestStatus.PENDING, pageable);
+
+        return requests.map(req -> IncomingRequestResponse.builder()
+                .requestId(req.getRequestId())
+                .from(IncomingRequestResponse.FromInfo.builder().name(req.getRequester().getFullName())
+                .email(req.getRequester().getEmail()).build())
+                .amount(req.getAmount()).purpose(req.getPurpose())
+                .status(req.getStatus()).createdAt(req.getCreatedAt())
+                .expiresAt(req.getExpiresAt()).build());
+    }
+
+    // Outgoing requests — all statuses
+    public Page<OutgoingRequestResponse> getOutgoingRequests(Pageable pageable) {
+
+        User user = getLoggedInUser();
+
+        Page<MoneyRequest> requests = moneyRequestRepository
+                .findByRequesterOrderByCreatedAtDesc(user, pageable);
+
+        return requests.map(req -> OutgoingRequestResponse.builder()
+                .requestId(req.getRequestId())
+                .to(OutgoingRequestResponse.ToInfo.builder().name(req.getRequestee().getFullName())
+                .email(req.getRequestee().getEmail()).build())
+                .amount(req.getAmount()).purpose(req.getPurpose()).status(req.getStatus())
+                .createdAt(req.getCreatedAt()).build());
     }
 }

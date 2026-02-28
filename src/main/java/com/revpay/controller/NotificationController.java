@@ -1,6 +1,8 @@
 package com.revpay.controller;
 
+import com.revpay.dto.ApiDataResponse;
 import com.revpay.dto.ApiResponse;
+import com.revpay.dto.NotificationPreferenceResponse;
 import com.revpay.dto.NotificationResponseDTO;
 import com.revpay.service.NotificationService;
 import com.revpay.util.JwtUtil;
@@ -102,6 +104,7 @@ public class NotificationController {
         ApiResponse<Void> response = new ApiResponse<>(true, "Notifications updated successfully");
         return ResponseEntity.ok(response);
     }
+
     @Operation(
             summary = "Mark Notification as Read",
             description = "Mark a single notification as read when the user clicks or views it. " +
@@ -160,6 +163,19 @@ public class NotificationController {
                         )
                 )
         );
+    }
+
+    @Operation(
+            summary = "Get Notification Preferences",
+            description = "Returns one entry per notification type showing enabled/disabled status."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/preferences")
+    public ResponseEntity<ApiDataResponse<List<NotificationPreferenceResponse>>> getPreferences() {
+
+        List<NotificationPreferenceResponse> data = notificationService.getPreferences();
+
+        return ResponseEntity.ok(new ApiDataResponse<>(true, "Preferences fetched successfully", data));
     }
 
 }

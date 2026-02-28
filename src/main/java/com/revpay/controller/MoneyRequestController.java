@@ -1,13 +1,15 @@
 package com.revpay.controller;
 
-import com.revpay.dto.ApiDataResponse;
-import com.revpay.dto.ApiResponse;
-import com.revpay.dto.MoneyRequestCreateRequest;
+import com.revpay.dto.*;
 import com.revpay.model.MoneyRequest;
 import com.revpay.service.MoneyRequestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -20,11 +22,8 @@ import java.util.Map;
 @Tag(name = "Money Requests", description = "Send, accept, decline and cancel money requests")
 public class MoneyRequestController {
 
-    private final MoneyRequestService moneyRequestService;
-
-    public MoneyRequestController(MoneyRequestService moneyRequestService) {
-        this.moneyRequestService = moneyRequestService;
-    }
+    @Autowired
+    private MoneyRequestService moneyRequestService;
 
     @Operation(
             summary = "Money Request",
@@ -87,5 +86,39 @@ public class MoneyRequestController {
         ApiResponse<Void> response = new ApiResponse<>(true, "Request declined");
 
         return ResponseEntity.ok(response);
+    }
+
+    //Incoming requests
+    @Operation(
+            summary = "Incoming Money Requests",
+            description = "List all pending money requests directed at the logged-in user."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/requests/incoming")
+    public ResponseEntity<ApiDataResponse<Page<IncomingRequestResponse>>> getIncomingRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<IncomingRequestResponse> data = moneyRequestService.getIncomingRequests(pageable);
+
+        return ResponseEntity.ok(new ApiDataResponse<>(true, "Incoming requests fetched successfully", data));
+    }
+
+    //Outgoing requests
+    @Operation(
+            summary = "Outgoing Money Requests",
+            description = "List all money requests sent by the logged-in user — all statuses."
+    )
+    @SecurityRequirement(name = "bearerAuth")
+    @GetMapping("/requests/outgoing")
+    public ResponseEntity<ApiDataResponse<Page<OutgoingRequestResponse>>> getOutgoingRequests(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<OutgoingRequestResponse> data = moneyRequestService.getOutgoingRequests(pageable);
+
+        return ResponseEntity.ok(new ApiDataResponse<>(true, "Outgoing requests fetched successfully", data));
     }
 }

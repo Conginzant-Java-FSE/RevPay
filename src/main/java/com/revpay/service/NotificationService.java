@@ -1,8 +1,10 @@
 package com.revpay.service;
 
+import com.revpay.dto.NotificationPreferenceResponse;
 import com.revpay.dto.NotificationResponseDTO;
 import com.revpay.enums.NotificationType;
 import com.revpay.model.Notification;
+import com.revpay.model.NotificationPreference;
 import com.revpay.model.User;
 import com.revpay.repository.NotificationPreferenceRepository;
 import com.revpay.repository.NotificationRepository;
@@ -19,11 +21,13 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
-public class NotificationService {
+public class NotificationService extends BaseService {
 
     private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
@@ -71,7 +75,7 @@ public class NotificationService {
         notificationRepository.markAllAsReadByUser(user);
     }
 
-    // ── Core method — called from any service when something notable happens ──
+    // Send notification to user if they have enabled the notification type in their preferences
     @Transactional
     public void sendNotification(User user, NotificationType type, String message) {
         try {
@@ -97,6 +101,7 @@ public class NotificationService {
             logger.error("Failed to send notification to user {}: {}", user.getEmail(), e.getMessage());
         }
     }
+
     public Page<NotificationResponseDTO> getAllNotifications(int page, int size) {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -150,5 +155,26 @@ public class NotificationService {
         notificationRepository.save(notification);
 
         logger.info("Notification {} marked as read for user: {}", notificationId, user.getEmail());
+    }
+
+    public List<NotificationPreferenceResponse> getPreferences() {
+
+        User user = getLoggedInUser();
+
+        List<NotificationPreference> savedPreferences =
+                notificationPreferenceRepository.findByUser(user);
+
+        Map<NotificationType, Boolean> prefMap = savedPreferences.stream()
+                .collect(Collectors.toMap(
+                        NotificationPreference::getNotificationType,
+                        NotificationPreference::getIsEnabled
+                ));
+
+        return Arrays.stream(NotificationType.values())
+                .map(type -> NotificationPreferenceResponse.builder()
+                        .notificationType(type)
+                        .isEnabled(prefMap.getOrDefault(type, true))
+                        .build())
+                .collect(Collectors.toList());
     }
 }
