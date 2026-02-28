@@ -28,27 +28,22 @@ public class MoneyRequestController {
 
     @Operation(
             summary = "Money Request",
-            description = "Request money from a user."
+            description = "Request money from a user. Recipient can be identified by email, phone, or username."
     )
     @SecurityRequirement(name = "bearerAuth")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Money request sent"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Recipient not found or requesting from yourself"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
     @PostMapping("/request")
-    public ResponseEntity<ApiDataResponse<?>> createRequest(@RequestBody MoneyRequestCreateRequest requestDto,
-            Authentication authentication) {
+    public ResponseEntity<ApiDataResponse<MoneyRequestCreateResponse>> createRequest(
+            @Valid @RequestBody MoneyRequestCreateRequest request) {
 
-        String email = authentication.getName();
-
-        MoneyRequest request = moneyRequestService.createRequest(requestDto, email);
-
-        Map<String, Object> data = new HashMap<>();
-        data.put("requestId", request.getRequestId());
-        data.put("amount", request.getAmount());
-        data.put("purpose", request.getPurpose());
-        data.put("status", request.getStatus());
-        data.put("expiresAt", request.getExpiresAt());
+        MoneyRequestCreateResponse data = moneyRequestService.createRequest(request);
 
         return ResponseEntity.ok(
-                new ApiDataResponse(true, "Money request sent", data)
-        );
+                new ApiDataResponse<>(true, "Money request sent", data));
     }
 
     @Operation(

@@ -61,16 +61,14 @@ public class MoneyRequestService extends BaseService {
     }
 
     @Transactional
-    public MoneyRequest createRequest(MoneyRequestCreateRequest dto, String email) {
+    public MoneyRequestCreateResponse createRequest(MoneyRequestCreateRequest dto) {
 
-        User requester = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+        User requester = getLoggedInUser();
 
-        User requestee = userRepository.findByEmail(dto.getRecipient())
-                .orElseThrow(() -> new RuntimeException("Recipient not found"));
+        User requestee = findUserByIdentifier(dto.getRecipient().trim());
 
         if (requester.getId().equals(requestee.getId())) {
-            throw new RuntimeException("Cannot request money from yourself");
+            throw new IllegalArgumentException("You cannot request money from yourself");
         }
 
         MoneyRequest request = new MoneyRequest();
@@ -79,11 +77,36 @@ public class MoneyRequestService extends BaseService {
         request.setAmount(dto.getAmount());
         request.setPurpose(dto.getPurpose());
         request.setStatus(RequestStatus.PENDING);
-
-
         request.setExpiresAt(LocalDateTime.now().plusDays(7));
 
-        return moneyRequestRepository.save(request);
+        moneyRequestRepository.save(request);
+
+        notificationService.sendNotification(
+                requestee, NotificationType.MONEY_REQUEST_RECEIVED,
+                requester.getFullName() + " has requested ₹" + dto.getAmount() + " from you for: " + dto.getPurpose()
+        );
+
+        logger.info("Money request created by {} for ₹{} from {}", requester.getEmail(), dto.getAmount(), requestee.getEmail());
+
+        return MoneyRequestCreateResponse.builder()
+                .requestId(request.getRequestId()).amount(request.getAmount())
+                .purpose(request.getPurpose()).status(request.getStatus())
+                .expiresAt(request.getExpiresAt()).build();
+    }
+
+    // ── Find user by email, phone, or username
+    private User findUserByIdentifier(String identifier) {
+
+        var byEmail = userRepository.findByEmail(identifier);
+        if (byEmail.isPresent()) return byEmail.get();
+
+        var byPhone = userRepository.findByPhone(identifier);
+        if (byPhone.isPresent()) return byPhone.get();
+
+        var byUsername = userRepository.findByUsername(identifier);
+        if (byUsername.isPresent()) return byUsername.get();
+
+        throw new IllegalArgumentException("No RevPay user found with email, phone, or username: " + identifier);
     }
 
     @Transactional
