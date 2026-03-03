@@ -23,6 +23,7 @@ public class ProfileMeResponse {
     private String email;
     private String phone;
     private Boolean profileComplete;
+    private Boolean mtpinSet;
     private BigDecimal walletBalance;
     private LocalDateTime createdAt;
 

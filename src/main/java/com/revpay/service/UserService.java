@@ -417,6 +417,8 @@ public class UserService {
 
         User user = getLoggedInUser();
 
+        boolean mtpinSet = user.getMtPin() != null && !user.getMtPin().isBlank();
+
         BigDecimal walletBalance = walletRepository.findByUser(user)
                 .map(Wallet::getBalance)
                 .orElse(BigDecimal.ZERO);
@@ -432,14 +434,9 @@ public class UserService {
                 .orElse(null);
 
         ProfileMeResponse.ProfileMeResponseBuilder builder = ProfileMeResponse.builder()
-                .userId(user.getId())
-                .accountType(user.getAccountType())
-                .fullName(user.getFullName())
-                .email(user.getEmail())
-                .phone(user.getPhone())
-                .walletBalance(walletBalance)
-                .bankAccount(bankAccountSummary)
-                .createdAt(user.getCreatedAt());
+                .userId(user.getId()).accountType(user.getAccountType()).fullName(user.getFullName()).email(user.getEmail())
+                .phone(user.getPhone()).walletBalance(walletBalance).bankAccount(bankAccountSummary)
+                .createdAt(user.getCreatedAt()).mtpinSet(mtpinSet);
 
         if (user.getAccountType() == AccountType.PERSONAL) {
 
