@@ -1,7 +1,6 @@
 package com.revpay.service;
 
-import com.revpay.dto.NotificationPreferenceResponse;
-import com.revpay.dto.NotificationResponseDTO;
+import com.revpay.dto.*;
 import com.revpay.enums.NotificationType;
 import com.revpay.model.Notification;
 import com.revpay.model.NotificationPreference;
@@ -176,5 +175,53 @@ public class NotificationService extends BaseService {
                         .isEnabled(prefMap.getOrDefault(type, true))
                         .build())
                 .collect(Collectors.toList());
+    }
+
+
+    @Transactional
+    public void updatePreferences(UpdateNotificationPreferenceRequest request) {
+
+        String username = SecurityContextHolder
+                .getContext()
+                .getAuthentication()
+                .getName();
+
+        logger.info("Updating notification preferences for user: {}", username);
+
+        User user = userRepository.findByEmail(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        request.getPreferences().forEach(item -> {
+
+            NotificationType type = item.getNotificationType();
+            Boolean enabled = item.getIsEnabled();
+
+            logger.info("Processing preference -> Type: {}, Enabled: {}", type, enabled);
+
+            NotificationPreference preference =
+                    notificationPreferenceRepository
+                            .findByUserAndNotificationType(user, type)
+                            .orElse(null);
+
+            if (preference != null) {
+
+                preference.setIsEnabled(enabled);
+                notificationPreferenceRepository.save(preference);
+                logger.info("Updated existing preference for type: {}", type);
+            } else {
+
+                NotificationPreference newPref =
+                        NotificationPreference.builder()
+                                .user(user)
+                                .notificationType(type)
+                                .isEnabled(enabled)
+                                .build();
+
+                notificationPreferenceRepository.save(newPref);
+                logger.info("Created new preference for type: {}", type);
+            }
+        });
+
+        logger.info("Notification preferences updated successfully for user: {}", username);
     }
 }

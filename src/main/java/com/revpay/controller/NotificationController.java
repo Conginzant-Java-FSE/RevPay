@@ -1,9 +1,6 @@
 package com.revpay.controller;
 
-import com.revpay.dto.ApiDataResponse;
-import com.revpay.dto.ApiResponse;
-import com.revpay.dto.NotificationPreferenceResponse;
-import com.revpay.dto.NotificationResponseDTO;
+import com.revpay.dto.*;
 import com.revpay.service.NotificationService;
 import com.revpay.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -12,10 +9,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -176,6 +175,22 @@ public class NotificationController {
         List<NotificationPreferenceResponse> data = notificationService.getPreferences();
 
         return ResponseEntity.ok(new ApiDataResponse<>(true, "Preferences fetched successfully", data));
+    }
+
+    @Operation(
+            summary = "Update notification preferences",
+            description = "Enable or disable specific notification types",
+            security = @SecurityRequirement(name = "bearerAuth")
+    )
+    @PutMapping("/preferences")
+//    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ApiResponse> updatePreferences(
+            @Valid @RequestBody UpdateNotificationPreferenceRequest request) {
+        notificationService.updatePreferences(request);
+        return ResponseEntity.ok(
+              new  ApiResponse<>(true, "Preferences updated successfully")
+
+        );
     }
 
 }
