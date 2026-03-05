@@ -8,13 +8,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-@ActiveProfiles("test")
 @ExtendWith(MockitoExtension.class)
 @DisplayName("JwtUtil Unit Tests")
 class JwtUtilTest {
@@ -26,7 +24,7 @@ class JwtUtilTest {
     private JwtUtil jwtUtil;
 
     private static final String SECRET = "ThisIsAVeryLongTestSecretKeyForJwtTesting1234567890";
-    private static final Long EXPIRATION = 3600000L; // 1 hour
+    private static final Long EXPIRATION = 3600000L;
 
     @BeforeEach
     void setUp() {
@@ -34,7 +32,6 @@ class JwtUtilTest {
         ReflectionTestUtils.setField(jwtUtil, "expiration", EXPIRATION);
     }
 
-    //GENERATE & EXTRACT
 
     @Test
     @DisplayName("generateToken: should create a valid JWT with correct claims")
@@ -70,7 +67,6 @@ class JwtUtilTest {
         assertThat(jwtUtil.isTokenExpired(token)).isFalse();
     }
 
-    // VALIDATE TOKEN
 
     @Test
     @DisplayName("validateToken: should return true for valid, non-blacklisted token")
@@ -94,7 +90,6 @@ class JwtUtilTest {
     @DisplayName("validateToken: should return false when username does not match token")
     void validateToken_usernameMismatch_shouldReturnFalse() {
         String token = jwtUtil.generateToken(1L, "user@example.com", "PERSONAL");
-        when(blacklistedTokenRepository.existsByToken(token)).thenReturn(false);
 
         assertThat(jwtUtil.validateToken(token, "other@example.com")).isFalse();
     }
@@ -105,7 +100,6 @@ class JwtUtilTest {
         assertThat(jwtUtil.validateToken("garbage.token.here", "user@example.com")).isFalse();
     }
 
-    // RESET TOKEN
 
     @Test
     @DisplayName("generateResetToken: should create a short-lived reset token with correct subject")
