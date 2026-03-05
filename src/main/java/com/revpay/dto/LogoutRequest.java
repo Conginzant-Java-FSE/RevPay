@@ -1,7 +1,7 @@
 package com.revpay.dto;
 
 public class LogoutRequest {
-private String token;
+    private String token;
 
     public LogoutRequest() {
     }
