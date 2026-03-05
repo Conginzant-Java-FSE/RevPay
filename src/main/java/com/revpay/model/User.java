@@ -55,6 +55,16 @@ public class User extends AuditConfig {
     @Column(name = "deactivation_reason", columnDefinition = "TEXT")
     private String deactivationReason;
 
+    @Column(name = "daily_limit")
+    private Double dailyLimit = 100000.0;
+
+    public Double getDailyLimit() {
+        return dailyLimit;
+    }
+
+    public void setDailyLimit(Double dailyLimit) {
+        this.dailyLimit = dailyLimit;
+    }
 
     public Long getId() {
         return id;
