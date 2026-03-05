@@ -89,8 +89,7 @@ public class PaymentMethodService extends BaseService {
                 paymentMethod.getCardId(),
                 paymentMethod.getLastFour(),
                 paymentMethod.getCardType(),
-                paymentMethod.getIsDefault()
-        );
+                paymentMethod.getIsDefault());
     }
 
     private void validateCardDetails(AddCardRequest request) {
@@ -125,8 +124,7 @@ public class PaymentMethodService extends BaseService {
     }
 
     public List<PaymentMethodListDTO> getUserCards(Long userId) {
-        List<PaymentMethod> cards =
-                paymentMethodRepository.findByUser_IdAndStatus(userId, RecordStatus.ACTIVE);
+        List<PaymentMethod> cards = paymentMethodRepository.findByUser_IdAndStatus(userId, RecordStatus.ACTIVE);
 
         return cards.stream().map(card -> {
 
@@ -135,8 +133,7 @@ public class PaymentMethodService extends BaseService {
                     Optional.ofNullable(card.getBillingCity()).orElse(""),
                     Optional.ofNullable(card.getBillingState()).orElse(""),
                     Optional.ofNullable(card.getBillingZip()).orElse(""),
-                    Optional.ofNullable(card.getBillingCountry()).orElse("")
-            );
+                    Optional.ofNullable(card.getBillingCountry()).orElse(""));
 
             return PaymentMethodListDTO.builder()
                     .cardId(card.getCardId())
@@ -187,5 +184,35 @@ public class PaymentMethodService extends BaseService {
         paymentMethodRepository.save(card);
 
         logger.info("Card {} updated for user: {}", cardId, user.getEmail());
+    }
+
+    @Transactional
+    public void deleteCard(Long cardId) {
+
+        User user = getLoggedInUser();
+
+        PaymentMethod card = paymentMethodRepository.findByCardIdAndUser(cardId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found or does not belong to this account"));
+
+        boolean wasDefault = card.getIsDefault();
+
+        card.setStatus(RecordStatus.DELETED);
+        card.setIsDefault(false);
+        paymentMethodRepository.save(card);
+
+        if (wasDefault) {
+            List<PaymentMethod> remainingCards = paymentMethodRepository.findByUser_IdAndStatus(user.getId(),
+                    RecordStatus.ACTIVE);
+            if (!remainingCards.isEmpty()) {
+                PaymentMethod newDefault = remainingCards.get(0);
+                newDefault.setIsDefault(true);
+                paymentMethodRepository.save(newDefault);
+                logger.info("Promoted card {} to default for user: {}", newDefault.getCardId(), user.getEmail());
+            } else {
+                logger.info("No remaining active cards for user {}. Default remains null.", user.getEmail());
+            }
+        }
+
+        logger.info("Card {} deleted for user: {}", cardId, user.getEmail());
     }
 }
