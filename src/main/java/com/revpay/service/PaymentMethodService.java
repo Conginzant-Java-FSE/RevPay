@@ -5,6 +5,7 @@ import com.revpay.dto.CardResponseDTO;
 import com.revpay.dto.PaymentMethodListDTO;
 import com.revpay.dto.UpdateCardRequest;
 import com.revpay.enums.CardType;
+import com.revpay.enums.NotificationType;
 import com.revpay.enums.RecordStatus;
 import com.revpay.model.PaymentMethod;
 import com.revpay.model.User;
@@ -33,6 +34,9 @@ public class PaymentMethodService extends BaseService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @Transactional
     public CardResponseDTO addCard(AddCardRequest request) {
@@ -188,4 +192,40 @@ public class PaymentMethodService extends BaseService {
 
         logger.info("Card {} updated for user: {}", cardId, user.getEmail());
     }
+
+    @Transactional
+    public void deleteCard(Long cardId) {
+
+        User user = getLoggedInUser();
+
+        PaymentMethod card = paymentMethodRepository.findByCardIdAndUser(cardId, user)
+                .orElseThrow(() -> new IllegalArgumentException("Card not found or does not belong to this account"));
+
+        boolean wasDefault = Boolean.TRUE.equals(card.getIsDefault());
+
+        paymentMethodRepository.delete(card);
+
+        logger.info("Card {} (ending {}) deleted for user: {}",
+                cardId, card.getLastFour(), user.getEmail());
+
+        if (wasDefault) {
+            List<PaymentMethod> remaining = paymentMethodRepository.findByUserOrderByIsDefaultDesc(user);
+
+            if (!remaining.isEmpty()) {
+                PaymentMethod nextDefault = remaining.get(0);
+                nextDefault.setIsDefault(true);
+                paymentMethodRepository.save(nextDefault);
+
+                logger.info("Card {} (ending {}) auto-promoted to default for user: {}",
+                        nextDefault.getCardId(), nextDefault.getLastFour(), user.getEmail());
+            }
+        }
+
+        notificationService.sendNotification(
+                user,
+                NotificationType.CARD_REMOVED,
+                "Card ending " + card.getLastFour() + " has been removed from your account"
+        );
+    }
+
 }

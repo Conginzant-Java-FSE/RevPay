@@ -126,4 +126,21 @@ public class PaymentMethodController {
 
         return ResponseEntity.ok(response);
     }
+
+    @Operation(summary = "Remove Payment Method", description = "Remove a linked card. Auto-promotes another card to default if deleted card was default.")
+    @SecurityRequirement(name = "bearerAuth")
+    @io.swagger.v3.oas.annotations.responses.ApiResponses(value = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Card removed successfully"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Card not found or does not belong to this account"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized - invalid or missing token")
+    })
+    @DeleteMapping("/{cardId}/delete")
+    public ResponseEntity<ApiResponse<Void>> deleteCard(@PathVariable Long cardId) {
+
+        paymentMethodService.deleteCard(cardId);
+
+        ApiResponse<Void> response = new ApiResponse<>(true, "Card removed successfully");
+
+        return ResponseEntity.ok(response);
+    }
 }
