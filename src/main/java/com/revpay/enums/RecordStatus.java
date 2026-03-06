@@ -5,5 +5,6 @@ public enum RecordStatus {
     INACTIVE,
     SUSPENDED,
     DEACTIVATED,
-    EXPIRED
+    EXPIRED,
+    DELETED
 }

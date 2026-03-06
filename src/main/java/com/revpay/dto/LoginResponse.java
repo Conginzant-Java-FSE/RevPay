@@ -20,6 +20,8 @@ public class LoginResponse {
         this.message = "Login successful";
     }
 
+    public LoginResponse() {}
+
     public String getToken() {
         return token;
     }
