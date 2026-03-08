@@ -45,7 +45,7 @@ public class FraudDetectionService {
         }
 
         // 🚨 Rule 1: High amount check
-        if (amount > 50000) {
+        if (amount > 50001) {
             fraudLogService.saveFraud(user, amount, "High transaction amount", true);
             return true;
         }
