@@ -2,6 +2,7 @@ package com.revpay.model;
 
 import com.revpay.config.AuditConfig;
 import com.revpay.enums.AccountType;
+import com.revpay.enums.Role;
 import com.revpay.enums.UserStatus;
 import jakarta.persistence.*;
 import org.springframework.data.annotation.CreatedDate;
@@ -55,6 +56,28 @@ public class User extends AuditConfig {
     @Column(name = "deactivation_reason", columnDefinition = "TEXT")
     private String deactivationReason;
 
+    @Column(name = "daily_limit")
+    private Double dailyLimit = 100000.0;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Role role = Role.USER;
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
+    }
+
+    public Double getDailyLimit() {
+        return dailyLimit;
+    }
+
+    public void setDailyLimit(Double dailyLimit) {
+        this.dailyLimit = dailyLimit;
+    }
 
     public Long getId() {
         return id;

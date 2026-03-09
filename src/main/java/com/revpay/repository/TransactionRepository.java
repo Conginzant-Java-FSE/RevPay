@@ -134,4 +134,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("status") TransactionStatus status
     );
 
+    @Query("""
+SELECT COALESCE(SUM(t.amount),0)
+FROM Transaction t
+WHERE t.sender.id = :userId
+AND t.createdAt >= :startOfDay
+AND t.status = 'SUCCESS'
+""")
+    Double getTodayTotal(@Param("userId") Long userId,
+                         @Param("startOfDay") LocalDateTime startOfDay);
+
 }

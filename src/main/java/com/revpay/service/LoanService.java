@@ -240,13 +240,40 @@ public class LoanService extends BaseService {
                     "Repayments can only be made on active loans. Current status: "
                             + loan.getStatus());
         }
+// HERE IS THE BUG FOR OUTSANDING AMOUNT AND EMI
+//        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount must be at least the monthly EMI of ₹"
+//                            + loan.getEmiAmount());
+//        }
 
-        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//        //CORRECT REPAY AMOUNT BUG FIXED
+//        // Minimum EMI check
+//        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount must be at least the monthly EMI of ₹" + loan.getEmiAmount());
+//        }
+//
+//Cannot exceed remaining loan
+//        if (request.getAmount().compareTo(loan.getOutstandingBalance()) > 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount cannot exceed outstanding balance of ₹" + loan.getOutstandingBalance());
+//        }
+
+
+        BigDecimal minPayment = loan.getOutstandingBalance().min(loan.getEmiAmount());
+
+        if (request.getAmount().compareTo(minPayment) < 0) {
             throw new IllegalArgumentException(
-                    "Repayment amount must be at least the monthly EMI of ₹"
-                            + loan.getEmiAmount());
+                    "Repayment amount must be at least ₹" + minPayment
+            );
         }
 
+        if (request.getAmount().compareTo(loan.getOutstandingBalance()) > 0) {
+            throw new IllegalArgumentException(
+                    "Repayment amount cannot exceed outstanding balance of ₹" + loan.getOutstandingBalance()
+            );
+        }
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Wallet not found"));
 
@@ -311,16 +338,48 @@ public class LoanService extends BaseService {
     }
 
     // EMI calculation using standard reducing balance formula
+//    private void approveLoan(Loan loan) {
+//
+//        BigDecimal principal    = loan.getLoanAmount();
+//        int        tenure       = loan.getTenureMonths();
+//        BigDecimal annualRate   = ANNUAL_INTEREST_RATE;
+//
+//        BigDecimal monthlyRate  = annualRate.divide(
+//                BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
+//
+//        BigDecimal onePlusR     = BigDecimal.ONE.add(monthlyRate);
+//        BigDecimal onePlusRPowN = onePlusR.pow(tenure, new MathContext(10));
+//
+//        BigDecimal emi = principal
+//                .multiply(monthlyRate)
+//                .multiply(onePlusRPowN)
+//                .divide(onePlusRPowN.subtract(BigDecimal.ONE), 2, RoundingMode.HALF_UP);
+//
+//        BigDecimal totalRepayable = emi.multiply(BigDecimal.valueOf(tenure))
+//                .setScale(2, RoundingMode.HALF_UP);
+//        BigDecimal totalInterest  = totalRepayable.subtract(principal)
+//                .setScale(2, RoundingMode.HALF_UP);
+//
+//        loan.setStatus(LoanStatus.ACTIVE);
+//        loan.setInterestRate(annualRate);
+//        loan.setEmiAmount(emi);
+//        loan.setTotalInterest(totalInterest);
+//        loan.setTotalRepayable(totalRepayable);
+//        loan.setOutstandingBalance(totalRepayable);
+//        loan.setAmountRepaid(BigDecimal.ZERO);
+//        loan.setApprovedAt(LocalDateTime.now());
+//        loan.setNextDueDate(LocalDate.now().plusMonths(1));
+//    }
     private void approveLoan(Loan loan) {
 
-        BigDecimal principal    = loan.getLoanAmount();
-        int        tenure       = loan.getTenureMonths();
-        BigDecimal annualRate   = ANNUAL_INTEREST_RATE;
+        BigDecimal principal = loan.getLoanAmount();
+        int tenure = loan.getTenureMonths();
+        BigDecimal annualRate = ANNUAL_INTEREST_RATE;
 
-        BigDecimal monthlyRate  = annualRate.divide(
+        BigDecimal monthlyRate = annualRate.divide(
                 BigDecimal.valueOf(1200), 10, RoundingMode.HALF_UP);
 
-        BigDecimal onePlusR     = BigDecimal.ONE.add(monthlyRate);
+        BigDecimal onePlusR = BigDecimal.ONE.add(monthlyRate);
         BigDecimal onePlusRPowN = onePlusR.pow(tenure, new MathContext(10));
 
         BigDecimal emi = principal
@@ -330,9 +389,11 @@ public class LoanService extends BaseService {
 
         BigDecimal totalRepayable = emi.multiply(BigDecimal.valueOf(tenure))
                 .setScale(2, RoundingMode.HALF_UP);
-        BigDecimal totalInterest  = totalRepayable.subtract(principal)
+
+        BigDecimal totalInterest = totalRepayable.subtract(principal)
                 .setScale(2, RoundingMode.HALF_UP);
 
+        // Loan details
         loan.setStatus(LoanStatus.ACTIVE);
         loan.setInterestRate(annualRate);
         loan.setEmiAmount(emi);
@@ -342,8 +403,28 @@ public class LoanService extends BaseService {
         loan.setAmountRepaid(BigDecimal.ZERO);
         loan.setApprovedAt(LocalDateTime.now());
         loan.setNextDueDate(LocalDate.now().plusMonths(1));
-    }
 
+        // 🔹 CREDIT LOAN AMOUNT TO WALLET
+        Wallet wallet = walletRepository.findByUser(loan.getUser())
+                .orElseThrow(() -> new IllegalStateException("Wallet not found"));
+
+        BigDecimal newBalance = wallet.getBalance().add(principal);
+        wallet.setBalance(newBalance);
+        walletRepository.save(wallet);
+
+        // 🔹 Create transaction record
+        Transaction transaction = new Transaction();
+        transaction.setSender(null);
+        transaction.setReceiver(loan.getUser());
+        transaction.setAmount(principal);
+        transaction.setTransactionType(TransactionType.LOAN_DIS);
+        transaction.setStatus(TransactionStatus.SUCCESS);
+        transaction.setBalanceAfter(newBalance);
+        transaction.setNote("Loan disbursed for loan #" + loan.getLoanId());
+        transaction.setCreatedAt(LocalDateTime.now());
+
+        transactionRepository.save(transaction);
+    }
     //Guard — business accounts only
     private void assertBusinessAccount(User user) {
         if (user.getAccountType() != AccountType.BUSINESS) {

@@ -8,5 +8,6 @@ public enum TransactionType {
     TOPUP,
     WITHDRAW,
     WITHDRAWAL,
-    LOAN_REPAYMENT
+    LOAN_REPAYMENT,
+    LOAN_DIS
 }

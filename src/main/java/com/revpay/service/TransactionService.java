@@ -12,6 +12,8 @@ import com.revpay.repository.TransactionRepository;
 import com.revpay.repository.UserRepository;
 import com.revpay.repository.WalletRepository;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -63,6 +65,9 @@ public class TransactionService {
         private BCryptPasswordEncoder passwordEncoder;
         @Autowired
         private NotificationService notificationService;
+
+        @Autowired
+        private FraudDetectionService fraudDetectionService;
 
         // ─────────────────────────────────────────────────────────────────────────
         // HELPER — resolve currently logged-in user
@@ -181,6 +186,12 @@ public class TransactionService {
                         throw new IllegalArgumentException("Insufficient wallet balance");
                 }
 
+
+                // 🔍 FRAUD CHECK
+                validateFraud(sender, request.getAmount());
+
+
+
                 // 6. Debit sender
                 BigDecimal senderBalanceAfter = senderWallet.getBalance().subtract(request.getAmount());
                 senderWallet.setBalance(senderBalanceAfter);
@@ -228,6 +239,35 @@ public class TransactionService {
                                 sender.getEmail(), receiver.getEmail(), request.getAmount());
 
                 return toDTO(transaction, sender);
+        }
+
+        private void validateFraud(User sender, @NotNull(message = "Amount is required") @DecimalMin(value = "1.00", message = "Minimum transfer amount is 1.00") BigDecimal amount) {
+
+                        boolean isFraud = fraudDetectionService
+                                .checkFraud(sender.getId(), amount.doubleValue());
+
+                        if (isFraud) {
+
+                                // Save FAILED transaction
+                                Transaction failedTransaction = new Transaction();
+                                failedTransaction.setSender(sender);
+                                failedTransaction.setAmount(amount);
+                                failedTransaction.setTransactionType(TransactionType.SEND);
+                                failedTransaction.setStatus(TransactionStatus.FAILED);
+                                failedTransaction.setCurrency("INR");
+                                failedTransaction.setNote("Blocked due to suspected fraud");
+                                transactionRepository.save(failedTransaction);
+
+                                // Optional: Notify user
+                                notificationService.sendNotification(
+                                        sender,
+                                        NotificationType.SECURITY_ALERT,
+                                        "Transaction blocked due to suspicious activity."
+                                );
+
+                                throw new IllegalStateException("Transaction blocked due to suspected fraud.");
+                        }
+
         }
 
         // =========================================================================
