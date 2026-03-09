@@ -16,17 +16,27 @@ import java.util.Optional;
 @Repository
 public interface LoanRepository extends JpaRepository<Loan, Long> {
 
+    // ── Existing methods (keep these — used by LoanService) ──────────────────
+
+    Page<Loan> findByUserAndStatusOrderByCreatedAtDesc(User user, LoanStatus status, Pageable pageable);
+
     Page<Loan> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
 
-    Page<Loan> findByUserAndStatusOrderByCreatedAtDesc(
-            User user, LoanStatus status, Pageable pageable);
+    boolean existsByUserAndStatus(User user, LoanStatus status);
 
     Optional<Loan> findByLoanIdAndUser(Long loanId, User user);
 
-    // Check if user has any active loan before allowing a new application
-    boolean existsByUserAndStatus(User user, LoanStatus status);
+    // ── New methods for AdminLoanService ──────────────────────────────────────
 
-    // Total outstanding balance across all active loans for a user
-    @Query("SELECT COALESCE(SUM(l.outstandingBalance), 0) FROM Loan l WHERE l.user = :user AND l.status = 'ACTIVE'")
-    BigDecimal sumOutstandingBalanceByUser(@Param("user") User user);
+    // All loans newest first (admin view — no user filter)
+    Page<Loan> findAllByOrderByCreatedAtDesc(Pageable pageable);
+
+    // Filter by status newest first (admin view)
+    Page<Loan> findByStatusOrderByCreatedAtDesc(LoanStatus status, Pageable pageable);
+
+    // Dashboard stats
+    long countByStatus(LoanStatus status);
+
+    @Query("SELECT SUM(l.loanAmount) FROM Loan l WHERE l.status = :status")
+    BigDecimal sumLoanAmountByStatus(@Param("status") LoanStatus status);
 }

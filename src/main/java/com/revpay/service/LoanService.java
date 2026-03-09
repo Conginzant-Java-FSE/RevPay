@@ -240,13 +240,40 @@ public class LoanService extends BaseService {
                     "Repayments can only be made on active loans. Current status: "
                             + loan.getStatus());
         }
+// HERE IS THE BUG FOR OUTSANDING AMOUNT AND EMI
+//        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount must be at least the monthly EMI of ₹"
+//                            + loan.getEmiAmount());
+//        }
 
-        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//        //CORRECT REPAY AMOUNT BUG FIXED
+//        // Minimum EMI check
+//        if (request.getAmount().compareTo(loan.getEmiAmount()) < 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount must be at least the monthly EMI of ₹" + loan.getEmiAmount());
+//        }
+//
+//Cannot exceed remaining loan
+//        if (request.getAmount().compareTo(loan.getOutstandingBalance()) > 0) {
+//            throw new IllegalArgumentException(
+//                    "Repayment amount cannot exceed outstanding balance of ₹" + loan.getOutstandingBalance());
+//        }
+
+
+        BigDecimal minPayment = loan.getOutstandingBalance().min(loan.getEmiAmount());
+
+        if (request.getAmount().compareTo(minPayment) < 0) {
             throw new IllegalArgumentException(
-                    "Repayment amount must be at least the monthly EMI of ₹"
-                            + loan.getEmiAmount());
+                    "Repayment amount must be at least ₹" + minPayment
+            );
         }
 
+        if (request.getAmount().compareTo(loan.getOutstandingBalance()) > 0) {
+            throw new IllegalArgumentException(
+                    "Repayment amount cannot exceed outstanding balance of ₹" + loan.getOutstandingBalance()
+            );
+        }
         Wallet wallet = walletRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("Wallet not found"));
 
