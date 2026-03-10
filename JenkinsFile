@@ -16,26 +16,26 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo "📥 Checking out code..."
+                echo "Checking out code..."
                 checkout scm
             }
         }
 
         stage('Build') {
             steps {
-                echo '🔨 Building JAR...'
+                echo 'Building JAR...'
                 bat 'mvn clean package -DskipTests'
                 bat 'dir target\\*.jar'
             }
             post {
-                success { echo '✅ Build passed!' }
-                failure { error '❌ Build failed — stopping.' }
+                success { echo 'Build Success!' }
+                failure { error 'Build failed — stopping.' }
             }
         }
 
         stage('Test') {
             steps {
-                echo '🧪 Running tests...'
+                echo 'Running tests...'
                 bat 'mvn test'
             }
             post {
@@ -43,52 +43,38 @@ pipeline {
                     junit testResults: 'target/surefire-reports/*.xml',
                           allowEmptyResults: true
                 }
-                success { echo '✅ Tests passed!' }
-                failure { error '❌ Tests failed — deployment blocked.' }
+                success { echo 'Tests passed!' }
+                failure { error 'Tests failed — deployment blocked.' }
             }
         }
 
         stage('Deploy to EC2') {
             steps {
-                echo '🚀 Deploying to EC2 via Publish Over SSH...'
-
+                echo 'Deploying to EC2...'
                 sshPublisher(
                     publishers: [
                         sshPublisherDesc(
-                            configName: 'RevPay-EC2',    // ← must match name in Step 2
+                            configName: 'RevPay-EC2',
                             verbose: true,
                             transfers: [
-
-                                // Transfer 1: Upload the JAR
+                                // Transfer 1: Upload JAR
                                 sshTransfer(
                                     sourceFiles: 'target/RevPay-0.0.1-SNAPSHOT.jar',
                                     removePrefix: 'target',
                                     remoteDirectory: '',
                                     execCommand: ''
                                 ),
-
-                                // Transfer 2: Rename + Restart service
+                                // Transfer 2: Swap + Restart with AWS profile
                                 sshTransfer(
                                     sourceFiles: '',
                                     remoteDirectory: '',
                                     execCommand: '''
-                                        echo "=== Stopping service ===" &&
                                         sudo systemctl stop revpay &&
-
-                                        echo "=== Backing up old JAR ===" &&
                                         cp /home/ec2-user/RevPay.jar /home/ec2-user/RevPay-backup.jar 2>/dev/null || true &&
-
-                                        echo "=== Activating new JAR ===" &&
                                         mv /home/ec2-user/RevPay-0.0.1-SNAPSHOT.jar /home/ec2-user/RevPay.jar &&
-
-                                        echo "=== Starting service ===" &&
                                         sudo systemctl start revpay &&
-
-                                        echo "=== Waiting for startup ===" &&
                                         sleep 15 &&
-
-                                        echo "=== Checking status ===" &&
-                                        sudo systemctl is-active revpay && echo "✅ App is LIVE!" || echo "❌ App failed to start"
+                                        sudo systemctl is-active revpay && echo "APP IS LIVE with AWS profile" || echo "APP FAILED"
                                     '''
                                 )
                             ]
@@ -96,35 +82,11 @@ pipeline {
                     ]
                 )
             }
-            post {
-                failure {
-                    echo '❌ Deploy failed — rolling back!'
-                    sshPublisher(
-                        publishers: [
-                            sshPublisherDesc(
-                                configName: 'RevPay-EC2',
-                                verbose: true,
-                                transfers: [
-                                    sshTransfer(
-                                        sourceFiles: '',
-                                        execCommand: '''
-                                            echo "=== Rolling back ===" &&
-                                            cp /home/ec2-user/RevPay-backup.jar /home/ec2-user/RevPay.jar &&
-                                            sudo systemctl restart revpay &&
-                                            echo "✅ Rollback complete"
-                                        '''
-                                    )
-                                ]
-                            )
-                        ]
-                    )
-                }
-            }
         }
 
         stage('Health Check') {
             steps {
-                echo '🏥 Final health check...'
+                echo 'Final health check...'
                 sshPublisher(
                     publishers: [
                         sshPublisherDesc(
@@ -135,8 +97,8 @@ pipeline {
                                     sourceFiles: '',
                                     execCommand: '''
                                         sudo systemctl is-active revpay &&
-                                        echo "✅ RevPay is LIVE and HEALTHY!" ||
-                                        (echo "❌ App is DOWN!" && exit 1)
+                                        echo "RevPay is LIVE and HEALTHY!" ||
+                                        (echo "App is DOWN!" && exit 1)
                                     '''
                                 )
                             ]
@@ -149,10 +111,10 @@ pipeline {
 
     post {
         success {
-            echo "✅ DEPLOYMENT SUCCESSFUL → http://YOUR_EC2_IP:8080"
+            echo "DEPLOYMENT SUCCESSFUL → http://16.112.148.230:8080"
         }
         failure {
-            echo "❌ PIPELINE FAILED — check console output"
+            echo "PIPELINE FAILED — check console output"
         }
         always {
             cleanWs()
