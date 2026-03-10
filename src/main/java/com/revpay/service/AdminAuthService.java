@@ -39,7 +39,7 @@ public class AdminAuthService {
         if (!user.isActive()) {
             throw new IllegalStateException("Admin account is disabled");
         }
-
+ 
         // 4. Password check
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             logger.warn("Wrong password for admin: {}", request.getEmail());

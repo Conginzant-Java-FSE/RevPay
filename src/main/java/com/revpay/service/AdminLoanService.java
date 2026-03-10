@@ -64,7 +64,7 @@ public class AdminLoanService {
         return toLoanDetailMap(loan);
     }
 
-    // ── APPROVE LOAN ───────────────────────────────────────────────────────────
+    // ── APPROVE LOAN ─────────────────────────────────────────
     @Transactional
     public Map<String, Object> approveLoan(Long loanId, String adminNote) {
 
