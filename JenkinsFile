@@ -1,0 +1,184 @@
+pipeline {
+    agent any
+
+    environment {
+        // ── Change these two values ──────────────────────────
+        EC2_HOST    = 'ec2-18-60-111-5.ap-south-2.compute.amazonaws.com'
+        // ─────────────────────────────────────────────────────
+
+        EC2_USER    = 'ec2-user'
+        JAR_NAME    = 'RevPay.jar'
+        DEPLOY_DIR  = '/home/ec2-user'
+        SERVICE     = 'revpay'
+        JAVA_VER    = 'JDK-21'
+        MAVEN_VER   = 'Maven-3.9'
+    }
+
+    tools {
+        jdk   "${JAVA_VER}"
+        maven "${MAVEN_VER}"
+    }
+
+    stages {
+
+        // ── Stage 1: Checkout ────────────────────────────────
+        stage('Checkout') {
+            steps {
+                echo "📥 Checking out branch: ${env.BRANCH_NAME}"
+                checkout scm
+                sh 'echo "Commit: $(git rev-parse --short HEAD)"'
+            }
+        }
+
+        // ── Stage 2: Build ───────────────────────────────────
+        stage('Build') {
+            steps {
+                echo '🔨 Building JAR with Maven...'
+                sh 'mvn clean package -DskipTests'
+                sh '''
+                    echo "--- Built JARs ---"
+                    ls -lh target/*.jar
+                '''
+            }
+            post {
+                success { echo '✅ Build passed!' }
+                failure { error '❌ Build failed — stopping pipeline.' }
+            }
+        }
+
+        // ── Stage 3: Test ────────────────────────────────────
+        stage('Test') {
+            steps {
+                echo '🧪 Running unit tests...'
+                sh 'mvn test'
+            }
+            post {
+                always {
+                    junit testResults: 'target/surefire-reports/*.xml',
+                          allowEmptyResults: true
+                }
+                success { echo '✅ All tests passed!' }
+                failure { error '❌ Tests failed — deployment blocked.' }
+            }
+        }
+
+        // ── Stage 4: Deploy ──────────────────────────────────
+        stage('Deploy to EC2') {
+            steps {
+                echo "🚀 Deploying to EC2: ${EC2_HOST}"
+                sshagent(credentials: ['ec2-ssh-key']) {
+
+                    // Upload new JAR as a temp file first
+                    sh """
+                        scp -o StrictHostKeyChecking=no \
+                            target/RevPay-0.0.1-SNAPSHOT.jar \
+                            ${EC2_USER}@${EC2_HOST}:${DEPLOY_DIR}/RevPay-new.jar
+                    """
+
+                    // SSH in and do the swap + restart
+                    sh """
+                        ssh -o StrictHostKeyChecking=no \
+                            ${EC2_USER}@${EC2_HOST} bash << 'ENDSSH'
+
+                        set -e
+                        echo "=== [1/4] Stopping service ==="
+                        sudo systemctl stop ${SERVICE}
+
+                        echo "=== [2/4] Backing up old JAR ==="
+                        if [ -f ${DEPLOY_DIR}/${JAR_NAME} ]; then
+                            cp ${DEPLOY_DIR}/${JAR_NAME} ${DEPLOY_DIR}/RevPay-backup.jar
+                            echo "Backup created: RevPay-backup.jar"
+                        fi
+
+                        echo "=== [3/4] Swapping JAR ==="
+                        mv ${DEPLOY_DIR}/RevPay-new.jar ${DEPLOY_DIR}/${JAR_NAME}
+                        echo "New JAR is now active"
+
+                        echo "=== [4/4] Starting service ==="
+                        sudo systemctl start ${SERVICE}
+                        echo "Service started!"
+
+ENDSSH
+                    """
+                }
+            }
+            post {
+                failure {
+                    echo '❌ Deploy failed! Rolling back to previous version...'
+                    sshagent(credentials: ['ec2-ssh-key']) {
+                        sh """
+                            ssh -o StrictHostKeyChecking=no \
+                                ${EC2_USER}@${EC2_HOST} bash << 'ENDSSH'
+
+                            if [ -f ${DEPLOY_DIR}/RevPay-backup.jar ]; then
+                                echo "Rolling back..."
+                                cp ${DEPLOY_DIR}/RevPay-backup.jar ${DEPLOY_DIR}/${JAR_NAME}
+                                sudo systemctl restart ${SERVICE}
+                                echo "✅ Rollback complete"
+                            else
+                                echo "⚠️ No backup found, cannot rollback"
+                            fi
+
+ENDSSH
+                        """
+                    }
+                }
+            }
+        }
+
+        // ── Stage 5: Health Check ────────────────────────────
+        stage('Health Check') {
+            steps {
+                echo '🏥 Verifying app is running...'
+                sshagent(credentials: ['ec2-ssh-key']) {
+                    sh """
+                        ssh -o StrictHostKeyChecking=no \
+                            ${EC2_USER}@${EC2_HOST} bash << 'ENDSSH'
+
+                        echo "Waiting 20s for app to fully start..."
+                        sleep 20
+
+                        if sudo systemctl is-active --quiet ${SERVICE}; then
+                            echo "✅ RevPay is LIVE!"
+                            sudo systemctl status ${SERVICE} --no-pager
+                        else
+                            echo "❌ App failed to start! Last 50 log lines:"
+                            tail -50 ${DEPLOY_DIR}/revpay-error.log
+                            sudo journalctl -u ${SERVICE} -n 50 --no-pager
+                            exit 1
+                        fi
+
+ENDSSH
+                    """
+                }
+            }
+        }
+    }
+
+    // ── Post Pipeline ────────────────────────────────────────
+    post {
+        success {
+            echo """
+            ╔══════════════════════════════════════╗
+            ║   ✅  DEPLOYMENT SUCCESSFUL          ║
+            ║   Branch : ${env.BRANCH_NAME}
+            ║   Build  : #${env.BUILD_NUMBER}
+            ║   App    : http://${EC2_HOST}:8080   ║
+            ╚══════════════════════════════════════╝
+            """
+        }
+        failure {
+            echo """
+            ╔══════════════════════════════════════╗
+            ║   ❌  PIPELINE FAILED                ║
+            ║   Branch : ${env.BRANCH_NAME}
+            ║   Build  : #${env.BUILD_NUMBER}
+            ║   Check console output above         ║
+            ╚══════════════════════════════════════╝
+            """
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
