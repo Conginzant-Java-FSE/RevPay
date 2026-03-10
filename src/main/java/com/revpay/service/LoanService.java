@@ -34,7 +34,7 @@ public class LoanService extends BaseService {
 
     @Autowired
     private LoanRepository loanRepository;
-
+ 
     @Autowired
     private WalletRepository walletRepository;
 
