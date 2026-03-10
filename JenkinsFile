@@ -1,0 +1,123 @@
+pipeline {
+    agent any
+
+    environment {
+        EC2_DEPLOY_DIR = '/home/ec2-user'
+        SERVICE        = 'revpay'
+        JAR_NAME       = 'RevPay.jar'
+    }
+
+    tools {
+        jdk   'JDK-21'
+        maven 'Maven-3.9'
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                echo "Checking out code..."
+                checkout scm
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo 'Building JAR...'
+                bat 'mvn clean package -DskipTests'
+                bat 'dir target\\*.jar'
+            }
+            post {
+                success { echo 'Build Success!' }
+                failure { error 'Build failed — stopping.' }
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo 'Running tests...'
+                bat 'mvn test'
+            }
+            post {
+                always {
+                    junit testResults: 'target/surefire-reports/*.xml',
+                          allowEmptyResults: true
+                }
+                success { echo 'Tests passed!' }
+                failure { error 'Tests failed — deployment blocked.' }
+            }
+        }
+
+        stage('Deploy to EC2') {
+            steps {
+                echo 'Deploying to EC2...'
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'RevPay-EC2',
+                            verbose: true,
+                            transfers: [
+                                // Transfer 1: Upload JAR
+                                sshTransfer(
+                                    sourceFiles: 'target/RevPay-0.0.1-SNAPSHOT.jar',
+                                    removePrefix: 'target',
+                                    remoteDirectory: '',
+                                    execCommand: ''
+                                ),
+                                // Transfer 2: Swap + Restart with AWS profile
+                                sshTransfer(
+                                    sourceFiles: '',
+                                    remoteDirectory: '',
+                                    execCommand: '''
+                                        sudo systemctl stop revpay &&
+                                        cp /home/ec2-user/RevPay.jar /home/ec2-user/RevPay-backup.jar 2>/dev/null || true &&
+                                        mv /home/ec2-user/RevPay-0.0.1-SNAPSHOT.jar /home/ec2-user/RevPay.jar &&
+                                        sudo systemctl start revpay &&
+                                        sleep 15 &&
+                                        sudo systemctl is-active revpay && echo "APP IS LIVE with AWS profile" || echo "APP FAILED"
+                                    '''
+                                )
+                            ]
+                        )
+                    ]
+                )
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                echo 'Final health check...'
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'RevPay-EC2',
+                            verbose: true,
+                            transfers: [
+                                sshTransfer(
+                                    sourceFiles: '',
+                                    execCommand: '''
+                                        sudo systemctl is-active revpay &&
+                                        echo "RevPay is LIVE and HEALTHY!" ||
+                                        (echo "App is DOWN!" && exit 1)
+                                    '''
+                                )
+                            ]
+                        )
+                    ]
+                )
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "DEPLOYMENT SUCCESSFUL → http://16.112.148.230:8080"
+        }
+        failure {
+            echo "PIPELINE FAILED — check console output"
+        }
+        always {
+            cleanWs()
+        }
+    }
+}
