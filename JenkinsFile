@@ -2,11 +2,9 @@ pipeline {
     agent any
 
     environment {
-        EC2_HOST   = '16.112.148.230'
-        EC2_USER   = 'ec2-user'
-        JAR_NAME   = 'RevPay.jar'
-        DEPLOY_DIR = '/home/ec2-user'
-        SERVICE    = 'revpay'
+        EC2_DEPLOY_DIR = '/home/ec2-user'
+        SERVICE        = 'revpay'
+        JAR_NAME       = 'RevPay.jar'
     }
 
     tools {
@@ -20,7 +18,6 @@ pipeline {
             steps {
                 echo "📥 Checking out code..."
                 checkout scm
-                bat 'git rev-parse --short HEAD'
             }
         }
 
@@ -28,6 +25,7 @@ pipeline {
             steps {
                 echo '🔨 Building JAR...'
                 bat 'mvn clean package -DskipTests'
+                bat 'dir target\\*.jar'
             }
             post {
                 success { echo '✅ Build passed!' }
@@ -52,60 +50,109 @@ pipeline {
 
         stage('Deploy to EC2') {
             steps {
-                echo "🚀 Deploying to EC2..."
-                sshagent(credentials: ['ec2-ssh-key']) {
+                echo '🚀 Deploying to EC2 via Publish Over SSH...'
 
-                    // Upload JAR to EC2
-                    bat """
-                        scp -o StrictHostKeyChecking=no ^
-                            target\\RevPay-0.0.1-SNAPSHOT.jar ^
-                            %EC2_USER%@%EC2_HOST%:%DEPLOY_DIR%/RevPay-new.jar
-                    """
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'RevPay-EC2',    // ← must match name in Step 2
+                            verbose: true,
+                            transfers: [
 
-                    // SSH and swap JAR
-                    bat """
-                        ssh -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
-                        "sudo systemctl stop %SERVICE% ; ^
-                        cp %DEPLOY_DIR%/%JAR_NAME% %DEPLOY_DIR%/RevPay-backup.jar 2>/dev/null || true ; ^
-                        mv %DEPLOY_DIR%/RevPay-new.jar %DEPLOY_DIR%/%JAR_NAME% ; ^
-                        sudo systemctl start %SERVICE%"
-                    """
-                }
+                                // Transfer 1: Upload the JAR
+                                sshTransfer(
+                                    sourceFiles: 'target/RevPay-0.0.1-SNAPSHOT.jar',
+                                    removePrefix: 'target',
+                                    remoteDirectory: '',
+                                    execCommand: ''
+                                ),
+
+                                // Transfer 2: Rename + Restart service
+                                sshTransfer(
+                                    sourceFiles: '',
+                                    remoteDirectory: '',
+                                    execCommand: '''
+                                        echo "=== Stopping service ===" &&
+                                        sudo systemctl stop revpay &&
+
+                                        echo "=== Backing up old JAR ===" &&
+                                        cp /home/ec2-user/RevPay.jar /home/ec2-user/RevPay-backup.jar 2>/dev/null || true &&
+
+                                        echo "=== Activating new JAR ===" &&
+                                        mv /home/ec2-user/RevPay-0.0.1-SNAPSHOT.jar /home/ec2-user/RevPay.jar &&
+
+                                        echo "=== Starting service ===" &&
+                                        sudo systemctl start revpay &&
+
+                                        echo "=== Waiting for startup ===" &&
+                                        sleep 15 &&
+
+                                        echo "=== Checking status ===" &&
+                                        sudo systemctl is-active revpay && echo "✅ App is LIVE!" || echo "❌ App failed to start"
+                                    '''
+                                )
+                            ]
+                        )
+                    ]
+                )
             }
             post {
                 failure {
                     echo '❌ Deploy failed — rolling back!'
-                    sshagent(credentials: ['ec2-ssh-key']) {
-                        bat """
-                            ssh -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
-                            "cp %DEPLOY_DIR%/RevPay-backup.jar %DEPLOY_DIR%/%JAR_NAME% && ^
-                            sudo systemctl restart %SERVICE% && ^
-                            echo Rollback done"
-                        """
-                    }
+                    sshPublisher(
+                        publishers: [
+                            sshPublisherDesc(
+                                configName: 'RevPay-EC2',
+                                verbose: true,
+                                transfers: [
+                                    sshTransfer(
+                                        sourceFiles: '',
+                                        execCommand: '''
+                                            echo "=== Rolling back ===" &&
+                                            cp /home/ec2-user/RevPay-backup.jar /home/ec2-user/RevPay.jar &&
+                                            sudo systemctl restart revpay &&
+                                            echo "✅ Rollback complete"
+                                        '''
+                                    )
+                                ]
+                            )
+                        ]
+                    )
                 }
             }
         }
 
         stage('Health Check') {
             steps {
-                echo '🏥 Checking app health...'
-                sshagent(credentials: ['ec2-ssh-key']) {
-                    bat """
-                        ssh -o StrictHostKeyChecking=no %EC2_USER%@%EC2_HOST% ^
-                        "sleep 15 && sudo systemctl is-active %SERVICE% && echo App is LIVE || exit 1"
-                    """
-                }
+                echo '🏥 Final health check...'
+                sshPublisher(
+                    publishers: [
+                        sshPublisherDesc(
+                            configName: 'RevPay-EC2',
+                            verbose: true,
+                            transfers: [
+                                sshTransfer(
+                                    sourceFiles: '',
+                                    execCommand: '''
+                                        sudo systemctl is-active revpay &&
+                                        echo "✅ RevPay is LIVE and HEALTHY!" ||
+                                        (echo "❌ App is DOWN!" && exit 1)
+                                    '''
+                                )
+                            ]
+                        )
+                    ]
+                )
             }
         }
     }
 
     post {
         success {
-            echo "✅ DEPLOYMENT SUCCESSFUL → http://${EC2_HOST}:8080"
+            echo "✅ DEPLOYMENT SUCCESSFUL → http://YOUR_EC2_IP:8080"
         }
         failure {
-            echo "❌ PIPELINE FAILED — check console output above"
+            echo "❌ PIPELINE FAILED — check console output"
         }
         always {
             cleanWs()
