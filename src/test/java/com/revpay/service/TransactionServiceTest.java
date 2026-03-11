@@ -41,7 +41,7 @@ class TransactionServiceTest {
     @Mock private WalletRepository walletRepository;
     @Mock private BCryptPasswordEncoder passwordEncoder;
     @Mock private NotificationService notificationService;
-
+    @Mock private FraudDetectionService fraudDetectionService;
     @InjectMocks
     private TransactionService transactionService;
 
@@ -80,6 +80,9 @@ class TransactionServiceTest {
         SecurityContext securityContext = mock(SecurityContext.class);
         when(securityContext.getAuthentication()).thenReturn(auth);
         SecurityContextHolder.setContext(securityContext);
+
+        lenient().when(fraudDetectionService.checkFraud(anyLong(), anyDouble()))
+                .thenReturn(false);
     }
 
     //  SEND MONEY
