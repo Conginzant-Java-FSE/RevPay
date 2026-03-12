@@ -39,6 +39,9 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
+    @Autowired
+    private EmailService emailService;
+
     @Operation(summary = "Register a new user", description = "Registers a new user or business user with encrypted password and security question")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User registered successfully"),
@@ -53,6 +56,7 @@ public class AuthController {
         if (response.getMessage().contains("already")) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
         }
+        emailService.sendWelcomeEmail(request.getEmail(), request.getFullName());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
