@@ -124,6 +124,9 @@ public class UserService {
         logger.info("Wallet created for user: {}", user.getEmail());
     }
 
+    @Autowired
+    private TwoFactorService twoFactorService;
+
     // User Login method
     public LoginResponse login(LoginRequest request) {
         // Find user by email or phone
@@ -139,6 +142,16 @@ public class UserService {
         // Verify password
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new RuntimeException("Invalid credentials");
+        }
+
+        // If 2FA is enabled, generate OTP and return response with token=null
+        if (user.isTwoFactorEnabled()) {
+            twoFactorService.generateAndSendOtp(user);
+            LoginResponse response = new LoginResponse();
+            response.setRequiresOtp(true);
+            response.setMessage("Two-factor authentication required. Please check your email.");
+            response.setEmail(user.getEmail()); // For frontend to know which email to verify
+            return response;
         }
 
         // Generate JWT token
