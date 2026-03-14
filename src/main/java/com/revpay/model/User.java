@@ -59,6 +59,15 @@ public class User extends AuditConfig {
     @Column(name = "daily_limit")
     private Double dailyLimit = 100000.0;
 
+    @Column(name = "two_factor_enabled")
+    private boolean twoFactorEnabled = false;
+
+    @Column(name = "otp_code")
+    private String otpCode;
+
+    @Column(name = "otp_expiry")
+    private LocalDateTime otpExpiry;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role = Role.USER;
@@ -180,6 +189,30 @@ public class User extends AuditConfig {
 
     public UserStatus getStatus() {
         return status;
+    }
+
+    public boolean isTwoFactorEnabled() {
+        return twoFactorEnabled;
+    }
+
+    public void setTwoFactorEnabled(boolean twoFactorEnabled) {
+        this.twoFactorEnabled = twoFactorEnabled;
+    }
+
+    public String getOtpCode() {
+        return otpCode;
+    }
+
+    public void setOtpCode(String otpCode) {
+        this.otpCode = otpCode;
+    }
+
+    public LocalDateTime getOtpExpiry() {
+        return otpExpiry;
+    }
+
+    public void setOtpExpiry(LocalDateTime otpExpiry) {
+        this.otpExpiry = otpExpiry;
     }
 
     public User(Long id, String mtPin, String username, String fullName, String email, String phone, String password, String securityQuestion, String securityAnswer, AccountType accountType, boolean active,UserStatus status ) {
