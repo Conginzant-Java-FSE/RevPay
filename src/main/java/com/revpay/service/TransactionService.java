@@ -1,5 +1,6 @@
 package com.revpay.service;
 
+import com.revpay.dto.ChatTransactionDTO;
 import com.revpay.dto.SendMoneyRequest;
 import com.revpay.dto.TransactionResponseDTO;
 import com.revpay.enums.NotificationType;
@@ -43,9 +44,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -215,6 +218,11 @@ public class TransactionService {
                 transaction.setBalanceAfter(senderBalanceAfter);
                 transaction.setCurrency("INR");
                 transaction.setNote(request.getNote());
+
+                transaction.setUtrNumber(
+                        "UTR" + System.currentTimeMillis() +
+                                UUID.randomUUID().toString().substring(0,6).toUpperCase()
+                );
                 transactionRepository.save(transaction);
 
                 // 9. Notify both parties
@@ -480,5 +488,52 @@ public class TransactionService {
 
                 document.add(table);
                 document.close();
+        }
+
+
+//
+//                * Returns chat-style transaction history between two users.
+//                * Sorted by timestamp ASC so messages appear in chat order.
+//                * Type is determined from the perspective of the requesting userId:
+//                *   sender == userId  → PAID
+// *  receiver == userId → RECEIVED
+//
+        public List<ChatTransactionDTO> getChatTransactionHistory(Long userId, Long otherUserId) {
+
+                // Security: authenticated user must match userId
+                User currentUser = getLoggedInUser();
+                if (!currentUser.getId().equals(userId)) {
+                        throw new IllegalArgumentException("Access denied: userId does not match authenticated user.");
+                }
+
+                User otherUser = userRepository.findById(otherUserId)
+                        .orElseThrow(() -> new IllegalArgumentException("User not found: " + otherUserId));
+
+                List<Transaction> transactions = transactionRepository
+                        .findChatHistory(currentUser, otherUser);
+
+                DateTimeFormatter timeFmt = DateTimeFormatter.ofPattern("hh:mm a");
+                DateTimeFormatter dateFmt = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+                return transactions.stream().map(t -> {
+                        boolean isPaid = t.getSender() != null
+                                && t.getSender().getId().equals(userId);
+
+                        String counterpartyName = isPaid
+                                ? (t.getReceiver() != null ? t.getReceiver().getFullName() : "Unknown")
+                                : (t.getSender() != null ? t.getSender().getFullName() : "Unknown");
+
+                        return ChatTransactionDTO.builder()
+                                .transactionId(t.getTransactionId())
+                                .amount(t.getAmount())
+                                .type(isPaid ? "PAID" : "RECEIVED")
+                                .time(t.getCreatedAt() != null ? t.getCreatedAt().format(timeFmt) : "")
+                                .date(t.getCreatedAt() != null ? t.getCreatedAt().format(dateFmt) : "")
+                                .status(t.getStatus() != null ? t.getStatus().name() : "")
+                                .note(t.getNote())
+                                .counterpartyName(counterpartyName)
+                                .utrNumber(t.getUtrNumber() != null ? t.getUtrNumber() : "")
+                                .build();
+                }).collect(Collectors.toList());
         }
 }
