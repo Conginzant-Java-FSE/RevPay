@@ -30,7 +30,7 @@ public class AdminAuthService {
                 .orElseThrow(() -> new IllegalArgumentException("Invalid admin credentials"));
 
         // 2. Must be ADMIN
-        if (user.getRole() != Role.ADMIN) {
+        if (user.getAccountType() != AccountType.ADMIN) {
             logger.warn("Non-admin login attempt: {}", request.getEmail());
             throw new IllegalArgumentException("Invalid admin credentials");
         }
