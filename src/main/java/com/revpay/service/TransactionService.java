@@ -1,6 +1,5 @@
 package com.revpay.service;
 
-
 import com.revpay.dto.SendMoneyRequest;
 import com.revpay.dto.TransactionResponseDTO;
 import com.revpay.enums.NotificationType;
@@ -278,13 +277,17 @@ public class TransactionService {
 
         }
 
-        // =========================================================================
-        // FEATURE 4 — RECENT TRANSACTIONS (last 5, for dashboard)
-        // GET /api/transactions/recent
-        // =========================================================================
-        public List<TransactionResponseDTO> getRecentTransactions() {
+    // =========================================================================
+    // FEATURE 4 — RECENT TRANSACTIONS (last 5, for dashboard)
+    // GET /api/transactions/recent
+    // =========================================================================
+    public List<TransactionResponseDTO> getRecentTransactions() {
+        return getRecentTransactions(RECENT_LIMIT);
+    }
 
-                User user = getLoggedInUser();
+    public List<TransactionResponseDTO> getRecentTransactions(int limit) {
+
+        User user = getLoggedInUser();
 
                 List<Transaction> recent = transactionRepository
                         .findRecentByUser(user, PageRequest.of(0, RECENT_LIMIT));
@@ -498,6 +501,5 @@ public class TransactionService {
                 document.add(table);
                 document.close();
         }
-
 
 }
