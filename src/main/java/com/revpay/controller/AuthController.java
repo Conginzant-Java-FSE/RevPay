@@ -2,6 +2,8 @@
 package com.revpay.controller;
 
 import com.revpay.dto.*;
+import com.revpay.model.User;
+import com.revpay.repository.UserRepository;
 import com.revpay.service.*;
 import com.revpay.util.JwtUtil;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +19,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -219,4 +223,77 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
+    @Autowired
+    private TwoFactorService twoFactorService;
+
+    @Operation(summary = "Verify 2FA OTP", description = "Verifies the 6-digit OTP and returns a JWT token if successful")
+    @PostMapping("/2fa/verify")
+    public ResponseEntity<?> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        try {
+            LoginResponse response = twoFactorService.verifyOtp(request.getEmailOrPhone(), request.getOtp());
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Resend 2FA OTP", description = "Generates and sends a new OTP to the user's email")
+    @PostMapping("/2fa/resend")
+    public ResponseEntity<?> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        try {
+            User user = (User) userRepository.findByEmail(request.getEmailOrPhone())
+                    .or(() -> userRepository.findByPhone(request.getEmailOrPhone()))
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            twoFactorService.generateAndSendOtp(user);
+            return ResponseEntity.ok(Map.of("message", "New verification code sent successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Enable 2FA", description = "Enables two-factor authentication for the authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/2fa/enable")
+    public ResponseEntity<?> enableTwoFactor() {
+        try {
+            User user = getLoggedInUser();
+            twoFactorService.enableTwoFactor(user);
+            return ResponseEntity.ok(Map.of("message", "Two-factor authentication enabled successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Operation(summary = "Disable 2FA", description = "Disables two-factor authentication for the authenticated user")
+    @SecurityRequirement(name = "bearerAuth")
+    @PostMapping("/2fa/disable")
+    public ResponseEntity<?> disableTwoFactor() {
+        try {
+            User user = getLoggedInUser();
+            twoFactorService.disableTwoFactor(user);
+            return ResponseEntity.ok(Map.of("message", "Two-factor authentication disabled successfully"));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private User getLoggedInUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || authentication.getName() == null) {
+            throw new RuntimeException("User not authenticated");
+        }
+        return userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
+    @Autowired
+    private org.springframework.security.core.userdetails.UserDetailsService userDetailsService;
+    // Note: getLoggedInUser above is slightly redundant with UserService one but helps keep the controller self-contained for these 2fa toggles.
 }

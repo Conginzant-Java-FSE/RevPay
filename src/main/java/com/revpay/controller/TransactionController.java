@@ -1,6 +1,6 @@
 package com.revpay.controller;
 
-import com.revpay.dto.ChatTransactionDTO;
+
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import com.revpay.service.TransactionService;
@@ -187,34 +187,5 @@ public class TransactionController {
                 transactionService.exportTransactions(format, type, status, from, to, search, response);
         }
 
-        @Operation(
-                summary = "Get Chat-Style Transaction History",
-                description = """
-        Returns all transactions between the authenticated user and another user,
-        sorted by timestamp ASC (oldest first, like a chat conversation).
- 
-        Type from requesting user's perspective:
-        - **PAID** → current user sent money
-        - **RECEIVED** → current user received money
- 
-        The authenticated user's ID must match the {userId} path variable.
-        """
-        )
-        @SecurityRequirement(name = "bearerAuth")
-        @ApiResponses(value = {
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Chat history fetched successfully"),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "User not found or access denied")
-        })
-        @GetMapping("/chat/{userId}/{otherUserId}")
-        public ResponseEntity<ApiDataResponse<List<ChatTransactionDTO>>> getChatTransactionHistory(
-                @PathVariable Long userId,
-                @PathVariable Long otherUserId) {
 
-                List<ChatTransactionDTO> data = transactionService.getChatTransactionHistory(userId, otherUserId);
-
-                return ResponseEntity.ok(
-                        new ApiDataResponse<>(true, "Chat transaction history fetched successfully", data)
-                );
-        }
 }
