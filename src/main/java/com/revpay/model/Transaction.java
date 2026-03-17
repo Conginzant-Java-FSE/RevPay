@@ -54,4 +54,7 @@ public class Transaction extends AuditConfig {
     @JoinColumn(name = "invoice_id")
     private Invoice invoice;
 
+    @Column(name = "utr_number", unique = true)
+    private String utrNumber;
+
 }

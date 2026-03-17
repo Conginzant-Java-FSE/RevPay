@@ -60,7 +60,6 @@ public class SecurityConfig {
 //                       .anyRequest().authenticated()
 //                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
@@ -68,6 +67,8 @@ public class SecurityConfig {
                                 "/api/auth/forgot-password/verify-identity",
                                 "/api/auth/forgot-password/validate-security",
                                 "/api/auth/forgot-password/reset",
+                                "/api/auth/2fa/verify",
+                                "/api/auth/2fa/resend",
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",

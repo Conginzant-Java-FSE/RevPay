@@ -1,5 +1,6 @@
 package com.revpay.service;
 
+
 import com.revpay.dto.SendMoneyRequest;
 import com.revpay.dto.TransactionResponseDTO;
 import com.revpay.enums.NotificationType;
@@ -43,9 +44,11 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -78,7 +81,7 @@ public class TransactionService {
                         throw new RuntimeException("User not authenticated");
                 }
                 return userRepository.findByEmail(auth.getName())
-                                .orElseThrow(() -> new RuntimeException("User not found"));
+                        .orElseThrow(() -> new RuntimeException("User not found"));
         }
 
         // =========================================================================
@@ -86,13 +89,13 @@ public class TransactionService {
         // GET /api/transactions
         // =========================================================================
         public Map<String, Object> getTransactions(
-                        int page,
-                        int size,
-                        TransactionType type,
-                        TransactionStatus status,
-                        LocalDate from,
-                        LocalDate to,
-                        String search) {
+                int page,
+                int size,
+                TransactionType type,
+                TransactionStatus status,
+                LocalDate from,
+                LocalDate to,
+                String search) {
 
                 User user = getLoggedInUser();
 
@@ -106,11 +109,11 @@ public class TransactionService {
                 String keyword = (search != null && !search.isBlank()) ? search.trim() : null;
 
                 Page<Transaction> resultPage = transactionRepository.findAllByUserWithFilters(
-                                user, type, status, fromDT, toDT, keyword, pageable);
+                        user, type, status, fromDT, toDT, keyword, pageable);
 
                 List<TransactionResponseDTO> data = resultPage.getContent().stream()
-                                .map(t -> toDTO(t, user))
-                                .collect(Collectors.toList());
+                        .map(t -> toDTO(t, user))
+                        .collect(Collectors.toList());
 
                 Map<String, Object> pagination = new LinkedHashMap<>();
                 pagination.put("currentPage", resultPage.getNumber());
@@ -126,7 +129,7 @@ public class TransactionService {
                 response.put("pagination", pagination);
 
                 logger.info("Transaction history fetched for user: {} | page={} size={} total={}",
-                                user.getEmail(), page, size, resultPage.getTotalElements());
+                        user.getEmail(), page, size, resultPage.getTotalElements());
 
                 return response;
         }
@@ -140,8 +143,8 @@ public class TransactionService {
                 User user = getLoggedInUser();
 
                 Transaction transaction = transactionRepository.findByIdAndUser(transactionId, user)
-                                .orElseThrow(() -> new IllegalArgumentException(
-                                                "Transaction not found with id: " + transactionId));
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Transaction not found with id: " + transactionId));
 
                 return toDTO(transaction, user);
         }
@@ -165,8 +168,8 @@ public class TransactionService {
 
                 // 2. Look up receiver by email or phone
                 User receiver = userRepository.findByEmail(request.getReceiverEmailOrPhone())
-                                .or(() -> userRepository.findByPhone(request.getReceiverEmailOrPhone()))
-                                .orElseThrow(() -> new IllegalArgumentException("Receiver not found"));
+                        .or(() -> userRepository.findByPhone(request.getReceiverEmailOrPhone()))
+                        .orElseThrow(() -> new IllegalArgumentException("Receiver not found"));
 
                 // 3. Cannot send to yourself
                 if (sender.getId().equals(receiver.getId())) {
@@ -180,7 +183,7 @@ public class TransactionService {
 
                 // 5. Check sender wallet balance
                 Wallet senderWallet = walletRepository.findByUser(sender)
-                                .orElseThrow(() -> new IllegalStateException("Sender wallet not found"));
+                        .orElseThrow(() -> new IllegalStateException("Sender wallet not found"));
 
                 if (senderWallet.getBalance().compareTo(request.getAmount()) < 0) {
                         throw new IllegalArgumentException("Insufficient wallet balance");
@@ -199,7 +202,7 @@ public class TransactionService {
 
                 // 7. Credit receiver
                 Wallet receiverWallet = walletRepository.findByUser(receiver)
-                                .orElseThrow(() -> new IllegalStateException("Receiver wallet not found"));
+                        .orElseThrow(() -> new IllegalStateException("Receiver wallet not found"));
 
                 BigDecimal receiverBalanceAfter = receiverWallet.getBalance().add(request.getAmount());
                 receiverWallet.setBalance(receiverBalanceAfter);
@@ -215,28 +218,33 @@ public class TransactionService {
                 transaction.setBalanceAfter(senderBalanceAfter);
                 transaction.setCurrency("INR");
                 transaction.setNote(request.getNote());
+
+                transaction.setUtrNumber(
+                        "UTR" + System.currentTimeMillis() +
+                                UUID.randomUUID().toString().substring(0,6).toUpperCase()
+                );
                 transactionRepository.save(transaction);
 
                 // 9. Notify both parties
                 notificationService.sendNotification(
-                                sender,
-                                NotificationType.TRANSACTION_SENT,
-                                "You sent ₹" + request.getAmount() + " to " + receiver.getFullName());
+                        sender,
+                        NotificationType.TRANSACTION_SENT,
+                        "You sent ₹" + request.getAmount() + " to " + receiver.getFullName());
                 notificationService.sendNotification(
-                                receiver,
-                                NotificationType.TRANSACTION_RECEIVED,
-                                "You received ₹" + request.getAmount() + " from " + sender.getFullName());
+                        receiver,
+                        NotificationType.TRANSACTION_RECEIVED,
+                        "You received ₹" + request.getAmount() + " from " + sender.getFullName());
 
                 // 10. Low balance warning (threshold: ₹100)
                 if (senderBalanceAfter.compareTo(new BigDecimal("100")) < 0) {
                         notificationService.sendNotification(
-                                        sender,
-                                        NotificationType.LOW_BALANCE,
-                                        "Your wallet balance is low: ₹" + senderBalanceAfter);
+                                sender,
+                                NotificationType.LOW_BALANCE,
+                                "Your wallet balance is low: ₹" + senderBalanceAfter);
                 }
 
                 logger.info("Money transfer: {} → {} | amount={}",
-                                sender.getEmail(), receiver.getEmail(), request.getAmount());
+                        sender.getEmail(), receiver.getEmail(), request.getAmount());
 
                 return toDTO(transaction, sender);
         }
@@ -279,11 +287,11 @@ public class TransactionService {
                 User user = getLoggedInUser();
 
                 List<Transaction> recent = transactionRepository
-                                .findRecentByUser(user, PageRequest.of(0, RECENT_LIMIT));
+                        .findRecentByUser(user, PageRequest.of(0, RECENT_LIMIT));
 
                 return recent.stream()
-                                .map(t -> toDTO(t, user))
-                                .collect(Collectors.toList());
+                        .map(t -> toDTO(t, user))
+                        .collect(Collectors.toList());
         }
 
         // =========================================================================
@@ -302,11 +310,11 @@ public class TransactionService {
                 LocalDateTime toDT = endDate.atTime(LocalTime.MAX);
 
                 BigDecimal totalReceived = transactionRepository
-                                .sumReceivedByUserAndDateRange(user, fromDT, toDT);
+                        .sumReceivedByUserAndDateRange(user, fromDT, toDT);
                 BigDecimal totalSent = transactionRepository
-                                .sumSentByUserAndDateRange(user, fromDT, toDT);
+                        .sumSentByUserAndDateRange(user, fromDT, toDT);
                 BigDecimal totalTopUps = transactionRepository
-                                .sumTopUpsByUserAndDateRange(user, fromDT, toDT);
+                        .sumTopUpsByUserAndDateRange(user, fromDT, toDT);
                 long totalCount = transactionRepository.countAllByUser(user);
                 long successCount = transactionRepository.countByUserAndStatus(user, TransactionStatus.SUCCESS);
                 long failedCount = transactionRepository.countByUserAndStatus(user, TransactionStatus.FAILED);
@@ -350,24 +358,33 @@ public class TransactionService {
                         final User cp = counterpartyUser;
                         // FIX: removed .phone() — CounterpartyDTO does not have a phone field
                         counterparty = TransactionResponseDTO.CounterpartyDTO.builder()
-                                        .userId(cp.getId())
-                                        .fullName(cp.getFullName())
-                                        .email(cp.getEmail())
-                                        .build();
+                                .userId(cp.getId())
+                                .fullName(cp.getFullName())
+                                .email(cp.getEmail())
+                                .build();
+                }
+
+                String displayType = t.getTransactionType() != null ? t.getTransactionType().name() : null;
+
+                // If this is a peer-to-peer SEND transfer and the current user is the receiver,
+                // display it as RECEIVE so the UI shows it correctly as incoming money (green).
+                if ("SEND".equals(displayType) && t.getReceiver() != null
+                        && t.getReceiver().getId().equals(currentUser.getId())) {
+                        displayType = "RECEIVE";
                 }
 
                 return TransactionResponseDTO.builder()
-                                .transactionId(t.getTransactionId())
-                                .type(t.getTransactionType() != null ? t.getTransactionType().name() : null)
-                                .status(t.getStatus() != null ? t.getStatus().name() : null)
-                                .amount(t.getAmount())
-                                .currency(t.getCurrency())
-                                .note(t.getNote())
-                                .counterparty(counterparty)
-                                .balanceAfter(t.getBalanceAfter())
-                                .createdAt(t.getCreatedAt())
-                                .completedAt(t.getUpdatedAt())
-                                .build();
+                        .transactionId(t.getTransactionId())
+                        .type(displayType)
+                        .status(t.getStatus() != null ? t.getStatus().name() : null)
+                        .amount(t.getAmount())
+                        .currency(t.getCurrency())
+                        .note(t.getNote())
+                        .counterparty(counterparty)
+                        .balanceAfter(t.getBalanceAfter())
+                        .createdAt(t.getCreatedAt())
+                        .completedAt(t.getUpdatedAt())
+                        .build();
         }
 
         // =========================================================================
@@ -375,13 +392,13 @@ public class TransactionService {
         // GET /api/transactions/export
         // =========================================================================
         public void exportTransactions(
-                        String format,
-                        TransactionType type,
-                        TransactionStatus status,
-                        LocalDate from,
-                        LocalDate to,
-                        String search,
-                        HttpServletResponse response) throws IOException {
+                String format,
+                TransactionType type,
+                TransactionStatus status,
+                LocalDate from,
+                LocalDate to,
+                String search,
+                HttpServletResponse response) throws IOException {
 
                 User user = getLoggedInUser();
 
@@ -391,11 +408,11 @@ public class TransactionService {
 
                 // Fetch all matching records (unpaginated)
                 Page<Transaction> resultPage = transactionRepository.findAllByUserWithFilters(
-                                user, type, status, fromDT, toDT, keyword, Pageable.unpaged());
+                        user, type, status, fromDT, toDT, keyword, Pageable.unpaged());
 
                 List<TransactionResponseDTO> data = resultPage.getContent().stream()
-                                .map(t -> toDTO(t, user))
-                                .collect(Collectors.toList());
+                        .map(t -> toDTO(t, user))
+                        .collect(Collectors.toList());
 
                 if ("CSV".equalsIgnoreCase(format)) {
                         exportToCsv(data, response);
@@ -411,24 +428,24 @@ public class TransactionService {
                 response.setHeader("Content-Disposition", "attachment; filename=\"revpay-transactions.csv\"");
 
                 CSVFormat csvFormat = CSVFormat.Builder.create()
-                                .setHeader("Transaction ID", "Date", "Type", "Status", "Amount", "Currency",
-                                                "Counterparty", "Balance After")
-                                .build();
+                        .setHeader("Transaction ID", "Date", "Type", "Status", "Amount", "Currency",
+                                "Counterparty", "Balance After")
+                        .build();
 
                 try (CSVPrinter printer = new CSVPrinter(response.getWriter(), csvFormat)) {
                         for (TransactionResponseDTO t : data) {
                                 String counterpartyName = t.getCounterparty() != null
-                                                ? t.getCounterparty().getFullName()
-                                                : "N/A";
+                                        ? t.getCounterparty().getFullName()
+                                        : "N/A";
                                 printer.printRecord(
-                                                t.getTransactionId(),
-                                                t.getCreatedAt().toString(),
-                                                t.getType(),
-                                                t.getStatus(),
-                                                t.getAmount(),
-                                                t.getCurrency(),
-                                                counterpartyName,
-                                                t.getBalanceAfter());
+                                        t.getTransactionId(),
+                                        t.getCreatedAt().toString(),
+                                        t.getType(),
+                                        t.getStatus(),
+                                        t.getAmount(),
+                                        t.getCurrency(),
+                                        counterpartyName,
+                                        t.getBalanceAfter());
                         }
                 }
         }
@@ -481,4 +498,6 @@ public class TransactionService {
                 document.add(table);
                 document.close();
         }
+
+
 }

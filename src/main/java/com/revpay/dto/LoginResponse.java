@@ -10,6 +10,7 @@ public class LoginResponse {
     private String email;
     private AccountType accountType;
     private String message;
+    private boolean requiresOtp = false;
 
     public LoginResponse(String token, Long userId, String fullName, String email, AccountType accountType) {
         this.token = token;
@@ -76,5 +77,13 @@ public class LoginResponse {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public boolean isRequiresOtp() {
+        return requiresOtp;
+    }
+
+    public void setRequiresOtp(boolean requiresOtp) {
+        this.requiresOtp = requiresOtp;
     }
 }

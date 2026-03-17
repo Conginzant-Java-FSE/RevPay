@@ -144,4 +144,18 @@ AND t.status = 'SUCCESS'
     Double getTodayTotal(@Param("userId") Long userId,
                          @Param("startOfDay") LocalDateTime startOfDay);
 
+    @Query("""
+    SELECT t FROM Transaction t
+    WHERE (
+        (t.sender = :user AND t.receiver = :other)
+        OR
+        (t.sender = :other AND t.receiver = :user)
+    )
+    AND t.transactionType = 'SEND'
+    ORDER BY t.createdAt ASC
+    """)
+    List<Transaction> findChatHistory(
+            @Param("user")  User user,
+            @Param("other") User other
+    );
 }
