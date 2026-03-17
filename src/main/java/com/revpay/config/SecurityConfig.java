@@ -73,7 +73,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/api/profile/reactivate-account",
-                                "/api/admin/login"
+                                "/api/admin/login",
+                                "/api/ai/public-chat"   // Public AI chat — no JWT required
                         ).permitAll()
                         .anyRequest().authenticated()
                 )
